@@ -1,0 +1,15 @@
+{
+  "name": "TaskDesk",
+  "short_name": "TaskDesk",
+  "description": "Task organizer with categories, priority, follow-up tracking, and reminders.",
+  "start_url": "taskdesk.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F4F5F8",
+  "theme_color": "#2D5BFF",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
