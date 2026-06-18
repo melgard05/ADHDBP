@@ -117,6 +117,7 @@
   .tag-when{background:#FBEFEA;color:#B45A3C}
   .tag-anx{background:#FCEEF4;color:var(--anx)}
   .tag-loc{background:#EBF4EF;color:var(--loc)}
+  .tag-help{background:#FFF0E6;color:#B5651D}
   .t-actions{display:flex;gap:4px;flex:none;opacity:0;transition:.12s}
   .task:hover .t-actions,.task:focus-within .t-actions{opacity:1}
   .icon-btn{border:0;background:transparent;color:var(--muted);padding:4px 6px;border-radius:8px;font-size:14px;cursor:pointer}
@@ -179,7 +180,13 @@
       <input id="quickAdd" placeholder="Brain dump — type a task and press Enter…" autocomplete="off">
       <button class="btn-primary" id="addBtn">Add</button>
     </div>
-    <div class="hint">Shortcuts: <b>!high</b> <b>!med</b> <b>!low</b> · <b>#category</b> · <b>~now</b> <b>~next</b> <b>~later</b> · <b>@work</b> <b>@home</b>. Write the <b>next physical action</b>, not the project.</div>
+    <div class="hint">Shortcuts: <b>!high</b> <b>!med</b> <b>!low</b> · <b>#category</b> · <b>~now</b> <b>~next</b> <b>~later</b> · <b>@work</b> <b>@home</b> <b>@cabin</b> <b>@newhouse</b> · <b>&amp;who</b> (promised to help). Write the <b>next physical action</b>, not the project.</div>
+
+    <div style="margin-top:12px;position:relative">
+      <input id="search" placeholder="🔍  Search tasks or a person's name…" autocomplete="off"
+        style="width:100%;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 34px 9px 12px;font-size:14px;font-family:inherit;color:var(--ink)">
+      <button id="searchClear" title="Clear" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--muted);font-size:16px;padding:4px 8px">✕</button>
+    </div>
 
     <div class="modebar" id="modebar">
       <span class="mb-label">Today I'm:</span>
@@ -194,7 +201,7 @@
 
     <div class="filters">
       <div class="loc-toggle" id="locToggle">
-        <button data-l="all" class="sel">All</button><button data-l="work">📍 Work</button><button data-l="home">🏠 Home</button>
+        <button data-l="all" class="sel">All</button><button data-l="work">📍 Work</button><button data-l="home">🏠 Home</button><button data-l="cabin">🌲 Cabin</button><button data-l="newhouse">🏡 New House</button>
       </div>
       <div class="chip active" data-view="all">Any horizon</div>
       <div class="chip" data-view="now">Now</div>
@@ -206,6 +213,8 @@
         <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
       </select>
       <div class="spacer"></div>
+      <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">
+        <input type="checkbox" id="promisedFilter"> Promised</label>
       <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">
         <input type="checkbox" id="anxFilter"> Needs a nudge</label>
       <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">
@@ -240,6 +249,7 @@
     <div class="sheet-body">
       <div class="field"><label>Task</label><input id="mName"></div>
       <div class="field"><label>Notes</label><textarea id="mNotes" placeholder="Details, links, the rest of the steps…"></textarea></div>
+      <div class="field"><label>Promised to help (who)</label><input id="mHelp" placeholder="Person you committed to (optional)"></div>
       <div class="grid2">
         <div class="field"><label>Category</label><input id="mCat" list="catList" placeholder="e.g. Steve's, Cards, Home"><datalist id="catList"></datalist></div>
         <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div></div>
@@ -257,7 +267,7 @@
       </div>
       <div class="grid2">
         <div class="field"><label>Location</label>
-          <select id="mLoc"><option value="">Anywhere</option><option value="work">Work</option><option value="home">Home</option></select></div>
+          <select id="mLoc"><option value="">Anywhere</option><option value="work">Work</option><option value="home">Home</option><option value="cabin">Cabin</option><option value="newhouse">New House</option></select></div>
         <div class="field"><label>Best time</label>
           <select id="mWhen"><option value="">—</option><option value="wkday_morning">Weekday morning</option><option value="after_work">Weekday after work</option><option value="weekend">Weekend</option><option value="anytime">Anytime</option></select></div>
       </div>
@@ -445,23 +455,25 @@ let view="all";
 
 /* ---- quick add ---- */
 function parseQuick(raw){
-  let t={priority:"medium",horizon:"",category:"",loc:""}, text=raw;
+  let t={priority:"medium",horizon:"",category:"",loc:"",helpFor:""}, text=raw;
   const pr=text.match(/!(high|med|medium|low)\b/i);
   if(pr){ t.priority=pr[1].toLowerCase()==="med"?"medium":pr[1].toLowerCase(); text=text.replace(pr[0],""); }
   const hz=text.match(/~(now|next|later)\b/i);
   if(hz){ t.horizon=hz[1].toLowerCase(); text=text.replace(hz[0],""); }
-  const lo=text.match(/@(work|home)\b/i);
+  const lo=text.match(/@(work|home|cabin|newhouse)\b/i);
   if(lo){ t.loc=lo[1].toLowerCase(); text=text.replace(lo[0],""); }
+  const hf=text.match(/&([^\s&#@!~]+)/);
+  if(hf){ t.helpFor=hf[1]; text=text.replace(hf[0],""); }
   const cat=text.match(/#([^\s#]+)/);
   if(cat){ t.category=cat[1]; text=text.replace(cat[0],""); }
   t.title=text.replace(/\s+/g," ").trim(); return t;
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",recurOrd:1,recurDow:1,whenHint:"",waitOn:"",waitSince:"",
-  loc:"",anxiety:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",helpFor:"",anxiety:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
-  const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,loc:p.loc});
+  const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,loc:p.loc,helpFor:p.helpFor});
   tasks.unshift(t); $("#quickAdd").value=""; save(); render(); openEdit(t.id); }
 
 /* ---- recurring ---- */
@@ -507,13 +519,18 @@ function moveToWaiting(t){ t.status="waiting"; if(!t.waitSince)t.waitSince=today
 function snoozeChase(t){ t.due=chaseDate(3); t.reminded=false; touch(t); save(); render(); toast("Chase pushed to "+fmtDue(t.due)); }
 
 /* ---- filtering / sorting ---- */
-function visible(){ const cf=$("#catFilter").value, pf=$("#prFilter").value, hd=$("#hideDone").checked, anx=$("#anxFilter").checked;
+function searchActive(){ return $("#search").value.trim()!==""; }
+function visible(){
+  const q=$("#search").value.trim().toLowerCase();
+  if(q){ return live().filter(t=>[t.title,t.notes,t.category,t.waitOn,t.helpFor].some(f=>(f||"").toLowerCase().includes(q))); }
+  const cf=$("#catFilter").value, pf=$("#prFilter").value, hd=$("#hideDone").checked, anx=$("#anxFilter").checked, prom=$("#promisedFilter").checked;
   return live().filter(t=>{
     if(view!=="all" && t.horizon!==view) return false;
     if(locView!=="all" && t.loc && t.loc!==locView) return false;
     if(cf && t.category!==cf) return false;
     if(pf && t.priority!==pf) return false;
     if(anx && !t.anxiety) return false;
+    if(prom && !t.helpFor) return false;
     if(hd && t.status==="done") return false;
     return true; }); }
 function byPriorityThenDue(a,b){
@@ -557,7 +574,9 @@ function card(t){
   el.className="task pr-"+t.priority+(t.status==="done"?" is-done":"")+(t.anxiety?" anx":"");
   const overdue=t.due && new Date(t.due)<new Date() && t.status!=="done";
   const tags=[];
-  if(t.loc) tags.push('<span class="tag tag-loc">'+(t.loc==="work"?"📍 work":"🏠 home")+'</span>');
+  if(t.loc){ const lm={work:"📍 work",home:"🏠 home",cabin:"🌲 cabin",newhouse:"🏡 new house"}[t.loc]||t.loc;
+    tags.push('<span class="tag tag-loc">'+lm+'</span>'); }
+  if(t.helpFor) tags.push('<span class="tag tag-help">🤝 for '+esc(t.helpFor)+'</span>');
   if(t.category) tags.push('<span class="tag tag-cat">'+esc(t.category)+'</span>');
   if(t.due){ const lbl=t.status==="waiting"?"chase ":""; const od=overdue?(t.status==="waiting"?" · now":" · overdue"):"";
     tags.push('<span class="tag tag-due '+(overdue?"overdue":"")+'">&#9200; '+lbl+fmtDue(t.due)+od+'</span>'); }
@@ -636,6 +655,7 @@ function scoreTask(t, ctx){ let s=0;
   return s; }
 function renderSuggest(){
   const box=$("#suggest"); box.className="suggest";
+  if(searchActive()){ box.classList.remove("show"); box.innerHTML=""; return; }
   const act=visible().filter(t=>t.status==="todo"||t.status==="doing");
   if(!act.length){ box.classList.remove("show"); box.innerHTML=""; return; }
   let picks,head,sub;
@@ -710,7 +730,7 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   $("#mRecurOrd").value=(t.recurOrd==null?1:t.recurOrd); $("#mRecurDow").value=(t.recurDow==null?1:t.recurDow);
   $("#mWhen").value=t.whenHint||"";
   $("#mWaitOn").value=t.waitOn||""; $("#mWaitSince").value=t.waitSince||"";
-  $("#mLoc").value=t.loc||""; $("#mAnx").checked=!!t.anxiety;
+  $("#mLoc").value=t.loc||""; $("#mAnx").checked=!!t.anxiety; $("#mHelp").value=t.helpFor||"";
   setSeg("#mPr",t.priority); setSeg("#mStatus",t.status);
   $("#waitWrap").style.display=t.status==="waiting"?"grid":"none";
   refreshDueDow(); refreshNthWrap();
@@ -738,7 +758,7 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.horizon=$("#mHorizon").value; t.recur=$("#mRecur").value;
   t.recurOrd=parseInt($("#mRecurOrd").value); t.recurDow=parseInt($("#mRecurDow").value);
   t.whenHint=$("#mWhen").value;
-  t.loc=$("#mLoc").value; t.anxiety=$("#mAnx").checked;
+  t.loc=$("#mLoc").value; t.anxiety=$("#mAnx").checked; t.helpFor=$("#mHelp").value.trim();
   t.priority=getSeg("#mPr")||"medium";
   const ns=getSeg("#mStatus")||"todo";
   if(ns==="done"&&t.status!=="done")t.completedAt=now();
@@ -837,7 +857,7 @@ $("#tReset").onclick=()=>{ stopTimer(); resetTimer(); };
 
 /* ---- CSV export ---- */
 $("#exportBtn").onclick=()=>{
-  const cols=["title","category","priority","status","loc","anxiety","horizon","energy","estimate","due","recur","waitOn","waitSince","notes","lastUpdate","pickUpNext"];
+  const cols=["title","category","priority","status","loc","helpFor","anxiety","horizon","energy","estimate","due","recur","waitOn","waitSince","notes","lastUpdate","pickUpNext"];
   const rows=live().map(t=>{ const le=t.log&&t.log.length?t.log[t.log.length-1]:null;
     const lastUpdate=le?[le.summary,le.did].filter(Boolean).join(": "):""; const pickUpNext=le?(le.resume||""):"";
     return cols.map(c=>{ let v; if(c==="anxiety")v=t.anxiety?"yes":""; else if(c==="lastUpdate")v=lastUpdate; else if(c==="pickUpNext")v=pickUpNext; else v=(t[c]==null?"":t[c]);
@@ -848,7 +868,9 @@ $("#exportBtn").onclick=()=>{
 /* ---- controls ---- */
 $("#addBtn").onclick=addQuick;
 $("#quickAdd").addEventListener("keydown",e=>{ if(e.key==="Enter")addQuick(); });
-$("#catFilter").onchange=render; $("#prFilter").onchange=render; $("#hideDone").onchange=render; $("#anxFilter").onchange=render;
+$("#catFilter").onchange=render; $("#prFilter").onchange=render; $("#hideDone").onchange=render; $("#anxFilter").onchange=render; $("#promisedFilter").onchange=render;
+$("#search").addEventListener("input",()=>{ $("#searchClear").style.display=$("#search").value?"block":"none"; render(); });
+$("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.display="none"; render(); $("#search").focus(); };
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
 document.querySelectorAll("#modebar button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 document.querySelectorAll("#locToggle button").forEach(b=>b.onclick=()=>setLoc(b.dataset.l));
