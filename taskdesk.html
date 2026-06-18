@@ -172,7 +172,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">TaskDesk <small id="storeNote">loading…</small> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">TaskDesk <small id="storeNote" style="cursor:pointer">loading…</small> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="notifyBtn" title="Turn on reminders">&#128276; Reminders</button>
@@ -421,19 +421,19 @@ function endpoint(){
 function fbHeaders(extra){ const h=Object.assign({},extra||{}); if(FB.proxyURL&&FB.proxyToken)h["X-TD-Key"]=FB.proxyToken; return h; }
 async function fbPull(){ if(!fbEnabled())return null;
   try{ const r=await fetch(endpoint(),{cache:"no-store",headers:fbHeaders()}); if(!r.ok)throw 0;
-    const d=await r.json(); return Array.isArray(d)?d:(d?Object.values(d):[]); }
-  catch(e){ syncNote("offline"); return null; } }
+    const d=await r.json(); lastSyncOk=now(); syncState="ok"; return Array.isArray(d)?d:(d?Object.values(d):[]); }
+  catch(e){ syncState="offline"; syncNote(); return null; } }
 let pushTimer=null;
-function fbPushDebounced(){ if(!fbEnabled())return; syncNote("saving"); clearTimeout(pushTimer);
+function fbPushDebounced(){ if(!fbEnabled())return; syncState="saving"; syncNote(); clearTimeout(pushTimer);
   pushTimer=setTimeout(async()=>{ try{ const r=await fetch(endpoint(),{method:"PUT",headers:fbHeaders({"Content-Type":"application/json"}),body:JSON.stringify(tasks)});
-    syncNote(r.ok?"synced":"offline"); }catch(e){ syncNote("offline"); } },800); }
+    if(r.ok){ lastSyncOk=now(); syncState="ok"; } else syncState="offline"; syncNote(); }catch(e){ syncState="offline"; syncNote(); } },800); }
 function mergeRemote(remote){ if(!remote)return false;
   const map=new Map(); tasks.forEach(t=>map.set(t.id,t)); let changed=false;
   remote.forEach(rt=>{ if(!rt||!rt.id)return; const lt=map.get(rt.id);
     if(!lt || (rt.updatedAt||0)>(lt.updatedAt||0)){ map.set(rt.id,rt); changed=true; } });
   if(changed){ tasks=[...map.values()]; saveLocal(); } return changed; }
-async function syncPull(){ if(!fbEnabled())return; const r=await fbPull(); if(r===null)return;
-  if(mergeRemote(r)) render(); else syncNote("synced"); }
+async function syncPull(){ if(!fbEnabled())return; const r=await fbPull(); if(r===null){ syncNote(); return; }
+  if(mergeRemote(r)) render(); else syncNote(); }
 
 /* ---- helpers ---- */
 const $=s=>document.querySelector(s);
@@ -456,9 +456,13 @@ const estVal=t=>parseInt(t.estimate)||30;
 function taskLocs(t){ if(Array.isArray(t.locs)) return t.locs.filter(Boolean); return t.loc?[t.loc]:[]; }
 function locLabel(v){ return {work:"📍 work",home:"🏠 home",cabin:"🌲 cabin",newhouse:"🏡 new house"}[v] || ("📌 "+v); }
 const prRank={high:0,medium:1,low:2};
-function syncNote(state){ const el=$("#storeNote"); if(!el)return;
-  if(fbEnabled()) el.textContent={saving:"syncing…",synced:"synced across devices",offline:"offline — will sync"}[state]||"synced across devices";
-  else el.textContent = persistent ? "saved on this device" : "preview mode — won't persist here"; }
+let syncState=null, lastSyncOk=null;
+function syncNote(){ const el=$("#storeNote"); if(!el)return;
+  if(!fbEnabled()){ el.textContent = persistent ? "saved on this device" : "preview mode — won't persist here"; el.style.color="var(--muted)"; return; }
+  if(syncState==="saving"){ el.textContent="saving…"; el.style.color="var(--muted)"; }
+  else if(syncState==="offline"){ el.textContent="⚠ can't reach sync — tap to retry"; el.style.color="var(--hi)"; }
+  else if(syncState==="ok"){ const t=new Date(lastSyncOk); el.textContent="✓ synced "+t.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})+" · tap to refresh"; el.style.color="var(--done)"; }
+  else { el.textContent="connecting…"; el.style.color="var(--muted)"; } }
 function doneToday(){ const t=new Date(); t.setHours(0,0,0,0); return live().filter(x=>x.completedAt&&x.completedAt>=t.getTime()).length; }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
 async function copyText(s){ try{ await navigator.clipboard.writeText(s); }
@@ -558,7 +562,7 @@ function activeSort(a,b){
 
 /* ---- render ---- */
 function render(){
-  refreshCats(); syncNote(fbEnabled()?"synced":"");
+  refreshCats(); syncNote();
   $("#doneChip").textContent="✓ "+doneToday()+" today";
   const list=visible();
   const lanes=[
@@ -898,6 +902,7 @@ $("#exportBtn").onclick=()=>{
 $("#addBtn").onclick=addQuick;
 $("#quickAdd").addEventListener("keydown",e=>{ if(e.key==="Enter")addQuick(); });
 $("#catFilter").onchange=render; $("#prFilter").onchange=render; $("#hideDone").onchange=render; $("#anxFilter").onchange=render; $("#promisedFilter").onchange=render;
+$("#storeNote").onclick=()=>{ if(fbEnabled()){ syncState="saving"; syncNote(); syncPull(); fbPushDebounced(); } };
 $("#search").addEventListener("input",()=>{ $("#searchClear").style.display=$("#search").value?"block":"none"; render(); });
 $("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.display="none"; render(); $("#search").focus(); };
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
