@@ -1,11 +1,10 @@
 /* TaskDesk service worker
-   - Caches the app for offline use
-   - Focuses the app when a notification is clicked
-   - Receives Web Push messages (used once you add a push sender, e.g. a Cloudflare Worker)
-   NOTE: a service worker alone cannot fire timed reminders while the app is fully closed.
-   That needs a push *sender*. This SW is already a valid push *receiver* for that backend. */
+   - Network-first: always loads the latest version when online,
+     falls back to the saved copy only when offline.
+   - Focuses the app when a notification is clicked.
+   - Receives Web Push (for the future push backend). */
 
-const CACHE = "taskdesk-v1";
+const CACHE = "taskdesk-v2";   // bumped -> clears the old stuck cache
 const ASSETS = ["taskdesk.html", "manifest.json", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -26,13 +25,16 @@ self.addEventListener("activate", e => {
 
 self.addEventListener("fetch", e => {
   const req = e.request;
-  if (req.method !== "GET") return;                 // don't touch Firebase writes
+  if (req.method !== "GET") return;                 // don't touch sync writes
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;  // let cross-origin (Firebase) pass through
+  if (url.origin !== self.location.origin) return;  // let Firebase/Worker pass through
+  // Network-first: fetch the latest, update the saved copy, fall back if offline.
   e.respondWith(
-    caches.match(req).then(cached =>
-      cached || fetch(req).catch(() => caches.match("taskdesk.html"))
-    )
+    fetch(req).then(resp => {
+      const copy = resp.clone();
+      caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+      return resp;
+    }).catch(() => caches.match(req).then(c => c || caches.match("taskdesk.html")))
   );
 });
 
@@ -46,16 +48,13 @@ self.addEventListener("notificationclick", e => {
   );
 });
 
-/* Web Push receiver — only fires when a sender (your future Worker) delivers a push. */
 self.addEventListener("push", e => {
   let data = { title: "TaskDesk reminder", body: "" };
   try { data = e.data.json(); } catch (_) { if (e.data) data.body = e.data.text(); }
   e.waitUntil(
     self.registration.showNotification(data.title || "TaskDesk reminder", {
-      body: data.body || "",
-      tag: data.tag || "taskdesk",
-      icon: "icon-192.png",
-      badge: "icon-192.png"
+      body: data.body || "", tag: data.tag || "taskdesk",
+      icon: "icon-192.png", badge: "icon-192.png"
     })
   );
 });
