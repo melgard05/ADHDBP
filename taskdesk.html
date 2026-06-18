@@ -38,6 +38,8 @@
   button{font-family:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);
     color:var(--ink);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;transition:.12s}
   button:hover{border-color:#C9CFE0}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button:disabled:hover{border-color:var(--line)}
   button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .btn-primary:hover{filter:brightness(1.05);border-color:var(--accent)}
@@ -341,6 +343,7 @@
           <button data-v="doing">Still going</button>
           <button data-v="todo">Back to to-do</button>
         </div>
+        <div id="cDoneHint" style="font-size:11.5px;color:var(--muted);margin-top:6px">“Done — close it” unlocks once you select <b>Finished it</b> above.</div>
       </div>
       <div class="field" id="cWaitWrap" style="display:none"><label>Waiting on</label><input id="cWaitOn" placeholder="Who / what"></div>
     </div>
@@ -789,18 +792,27 @@ function closeModal(){ $("#modal").classList.remove("show"); editId=null; }
 
 /* ---- completion / progress modal ---- */
 let completeId=null;
+function updateDoneEnable(){
+  const fin=getSeg("#cChips")==="Finished it";
+  const dn=document.querySelector('#cNext button[data-v="done"]');
+  if(dn) dn.disabled=!fin;
+  if(!fin && getSeg("#cNext")==="done"){ setSeg("#cNext","doing"); $("#cWaitWrap").style.display="none"; }
+  $("#cDoneHint").style.display=fin?"none":"block";
+}
 function openComplete(id){ completeId=id; const t=tasks.find(x=>x.id===id); if(!t)return;
   $("#cInfo").textContent="· "+t.title; $("#cDid").value=""; $("#cResume").value="";
   document.querySelectorAll("#cChips button").forEach(b=>b.classList.remove("sel"));
-  setSeg("#cNext","done"); $("#cWaitWrap").style.display="none";
+  setSeg("#cNext","doing"); $("#cWaitWrap").style.display="none";
   $("#cWaitOn").value=t.waitOn||"";
+  updateDoneEnable();
   $("#complete").classList.add("show"); setTimeout(()=>$("#cDid").focus(),50); }
 document.querySelectorAll("#cChips button").forEach(b=>b.onclick=()=>{ const was=b.classList.contains("sel");
-  document.querySelectorAll("#cChips button").forEach(x=>x.classList.remove("sel")); if(!was)b.classList.add("sel"); });
-document.querySelectorAll("#cNext button").forEach(b=>b.onclick=()=>{ setSeg("#cNext",b.dataset.v); $("#cWaitWrap").style.display=b.dataset.v==="waiting"?"grid":"none"; });
+  document.querySelectorAll("#cChips button").forEach(x=>x.classList.remove("sel")); if(!was)b.classList.add("sel"); updateDoneEnable(); });
+document.querySelectorAll("#cNext button").forEach(b=>b.onclick=()=>{ if(b.disabled)return; setSeg("#cNext",b.dataset.v); $("#cWaitWrap").style.display=b.dataset.v==="waiting"?"grid":"none"; });
 $("#cCancel").onclick=()=>$("#complete").classList.remove("show");
 $("#cSave").onclick=()=>{ const t=tasks.find(x=>x.id===completeId); if(!t)return;
-  const summary=getSeg("#cChips"); const did=$("#cDid").value.trim(); const resume=$("#cResume").value.trim(); const next=getSeg("#cNext")||"done";
+  const summary=getSeg("#cChips"); const did=$("#cDid").value.trim(); const resume=$("#cResume").value.trim(); const next=getSeg("#cNext")||"doing";
+  if(next==="done" && !confirm("Mark “"+t.title+"” complete and close it?")) return;
   if(!t.log)t.log=[]; t.log.push({t:now(),summary:summary,did:did,resume:resume,next:next});
   if(next==="done"){ t.status="done"; t.completedAt=now(); spawnRecur(t); }
   else if(next==="waiting"){ t.status="waiting"; if(!t.waitSince)t.waitSince=todayStr();
