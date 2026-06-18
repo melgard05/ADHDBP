@@ -84,6 +84,11 @@
   .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
   .spacer{flex:1}
   .board{display:grid;grid-template-columns:1fr;gap:18px;margin-top:18px}
+  .lane-nav{display:flex;gap:8px;position:sticky;top:0;z-index:25;background:var(--bg);padding:10px 0 4px;margin-top:6px}
+  .lane-nav-btn{flex:1;font-size:12.5px;padding:8px 6px}
+  .lane-nav-btn b{font-size:13px}
+  .lane-nav-btn.waiting{color:var(--waiting);border-color:#D9CEFF}
+  .lane-nav-btn.done{color:var(--done);border-color:#BFE6D3}
   .lane-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .lane-head h2{font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
   .count{font-size:11px;font-weight:700;color:var(--muted);background:var(--line2);border-radius:999px;padding:2px 8px}
@@ -225,6 +230,7 @@
         <input type="checkbox" id="hideDone"> Hide done</label>
     </div>
   </header>
+  <div class="lane-nav" id="laneNav"></div>
   <div class="board cols" id="board"></div>
 </div>
 
@@ -571,11 +577,12 @@ function render(){
     {key:"done",label:"Done",cls:"done",match:t=>t.status==="done"}
   ];
   const board=$("#board"); board.innerHTML="";
+  const nav=$("#laneNav"); nav.innerHTML="";
   lanes.forEach(L=>{
     if(L.key==="done" && $("#hideDone").checked) return;
     let items=list.filter(L.match);
     items.sort(L.key==="active"?activeSort:L.key==="done"?(a,b)=>(b.completedAt||0)-(a.completedAt||0):byPriorityThenDue);
-    const lane=document.createElement("div"); lane.className="lane "+L.cls;
+    const lane=document.createElement("div"); lane.className="lane "+L.cls; lane.id="lane-"+L.key;
     lane.innerHTML='<div class="lane-head"><h2>'+L.label+'</h2><span class="count">'+items.length+'</span></div>';
     if(!items.length){ const e=document.createElement("div"); e.className="empty";
       e.textContent = L.key==="waiting" ? "Nothing parked here. Hit the ⏳ on a task after you've done your part."
@@ -583,6 +590,10 @@ function render(){
       lane.appendChild(e); }
     items.forEach(t=>lane.appendChild(card(t)));
     board.appendChild(lane);
+    const nb=document.createElement("button"); nb.className="lane-nav-btn "+L.cls;
+    nb.innerHTML=({active:"To do",waiting:"Waiting",done:"Done"}[L.key])+' <b>'+items.length+'</b>';
+    nb.onclick=()=>{ const el=document.getElementById("lane-"+L.key); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); };
+    nav.appendChild(nb);
   });
   renderAlerts(); renderSuggest();
 }
