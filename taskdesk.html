@@ -13,9 +13,8 @@
     --line:#E4E7EF; --line2:#EEF0F6;
     --accent:#2D5BFF; --waiting:#7C5CFF;
     --hi:#E5484D; --med:#E0871E; --lo:#9AA2B8;
-    --hiBg:#FDECEC; --medBg:#FBF1E2; --waitBg:#F1EDFF;
-    --done:#1E9E6A;
-    --depr:#3A4A7A; --mania:#C8472B;
+    --hiBg:#FDECEC; --waitBg:#F1EDFF; --done:#1E9E6A;
+    --depr:#3A4A7A; --mania:#C8472B; --anx:#C2407A; --loc:#3B7A5A;
     --shadow:0 1px 2px rgba(20,25,45,.06),0 6px 20px rgba(20,25,45,.06);
     --radius:14px; font-synthesis:none;
   }
@@ -43,7 +42,6 @@
   .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
   .btn-primary:hover{filter:brightness(1.05);border-color:var(--accent)}
   .btn-ghost{background:transparent}
-  /* mode bar */
   .modebar{display:flex;align-items:center;gap:6px;margin-top:12px;flex-wrap:wrap}
   .mb-label{font-size:12px;font-weight:700;color:var(--muted);margin-right:2px}
   .modebar button{padding:6px 16px;border-radius:999px;font-size:12.5px}
@@ -56,7 +54,6 @@
   .alert-card{background:#FFF7F7;border:1px solid #F3C9CA;border-left:4px solid var(--hi);
     border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .alert-card strong{color:var(--hi)}
-  /* suggestions */
   .suggest{display:none;margin-top:14px;background:var(--panel);border:1px solid var(--line);
     border-radius:14px;padding:14px;box-shadow:var(--shadow)}
   .suggest.show{display:block}
@@ -77,6 +74,9 @@
   .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 4px}
   .filters select{border:1px solid var(--line);background:var(--panel);border-radius:10px;
     padding:7px 10px;font-size:13px;color:var(--ink);font-family:inherit}
+  .loc-toggle{display:flex;gap:4px;margin-right:4px}
+  .loc-toggle button{padding:6px 12px;border-radius:999px;font-size:12.5px}
+  .loc-toggle button.sel{background:var(--loc);border-color:var(--loc);color:#fff}
   .chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);
     font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
   .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -92,6 +92,7 @@
   .task.pr-high{border-left:4px solid var(--hi)}
   .task.pr-medium{border-left:4px solid var(--med)}
   .task.pr-low{border-left:4px solid var(--lo)}
+  .task.anx{box-shadow:0 0 0 1px var(--anx) inset, var(--shadow)}
   .task.is-done{opacity:.6}
   .task.is-done .t-title{text-decoration:line-through}
   .check{flex:none;width:22px;height:22px;border-radius:7px;border:2px solid var(--line);
@@ -102,6 +103,7 @@
   .t-body{flex:1;min-width:0}
   .t-title{font-size:15px;font-weight:600;word-wrap:break-word}
   .t-notes{font-size:12.5px;color:var(--muted);margin-top:2px;white-space:pre-wrap}
+  .t-prog{font-size:12px;color:var(--accent);margin-top:3px}
   .t-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
   .tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:.01em}
   .tag-cat{background:var(--line2);color:var(--ink)}
@@ -112,6 +114,8 @@
   .tag-energy{background:#F3F1FB;color:#6B47D6}
   .tag-horizon{background:#FFF4E6;color:var(--med)}
   .tag-recur{background:#EEF6FF;color:#2563EB}
+  .tag-anx{background:#FCEEF4;color:var(--anx)}
+  .tag-loc{background:#EBF4EF;color:var(--loc)}
   .t-actions{display:flex;gap:4px;flex:none;opacity:0;transition:.12s}
   .task:hover .t-actions,.task:focus-within .t-actions{opacity:1}
   .icon-btn{border:0;background:transparent;color:var(--muted);padding:4px 6px;border-radius:8px;font-size:14px;cursor:pointer}
@@ -122,15 +126,15 @@
   #focus.show{display:grid}
   .focus-card{background:var(--panel);border-radius:20px;max-width:520px;width:100%;padding:30px;
     box-shadow:0 20px 60px rgba(20,25,45,.3);text-align:center}
-  .focus-eyebrow{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+  .focus-eyebrow{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
   .focus-title{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:14px 0 6px;line-height:1.2}
   .focus-notes{color:var(--muted);font-size:14px;margin-bottom:8px;white-space:pre-wrap}
   .focus-meta{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:14px 0 22px}
   .focus-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .timer{font-size:42px;font-weight:800;letter-spacing:-.02em;margin:8px 0;font-variant-numeric:tabular-nums}
   .timer-row{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
-  #modal,#chase,#tpl{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
-  #modal.show,#chase.show,#tpl.show{display:grid}
+  #modal,#chase,#tpl,#complete{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
+  #modal.show,#chase.show,#tpl.show,#complete.show{display:grid}
   .sheet{background:var(--panel);border-radius:18px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(20,25,45,.3)}
   .sheet h3{padding:18px 20px;border-bottom:1px solid var(--line);font-size:16px}
   .sheet h3 small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
@@ -140,6 +144,7 @@
   .field input,.field select,.field textarea{border:1px solid var(--line);border-radius:10px;
     padding:9px 11px;font-size:14px;font-family:inherit;background:#fff;color:var(--ink);width:100%}
   .field textarea{resize:vertical;min-height:60px}
+  .check-row{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500;color:var(--ink);text-transform:none;letter-spacing:0}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .sheet-foot{display:flex;justify-content:space-between;gap:8px;padding:14px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
   .seg{display:flex;gap:6px;flex-wrap:wrap}
@@ -150,6 +155,7 @@
   #chaseText{width:100%;min-height:90px;border:1px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:14px;resize:vertical}
   .tpl-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
   .tpl-row textarea{flex:1;min-height:48px;border:1px solid var(--line);border-radius:10px;padding:8px;font-family:inherit;font-size:13px;resize:vertical}
+  #mLog div{padding:3px 0;border-bottom:1px solid var(--line2)}
   #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);
     color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:90}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -172,7 +178,7 @@
       <input id="quickAdd" placeholder="Brain dump — type a task and press Enter…" autocomplete="off">
       <button class="btn-primary" id="addBtn">Add</button>
     </div>
-    <div class="hint">Shortcuts: <b>!high</b> <b>!med</b> <b>!low</b> · <b>#category</b> · <b>~now</b> <b>~next</b> <b>~later</b>. Tip: write the <b>next physical action</b> ("Open the MPCA form"), not the project.</div>
+    <div class="hint">Shortcuts: <b>!high</b> <b>!med</b> <b>!low</b> · <b>#category</b> · <b>~now</b> <b>~next</b> <b>~later</b> · <b>@work</b> <b>@home</b>. Write the <b>next physical action</b>, not the project.</div>
 
     <div class="modebar" id="modebar">
       <span class="mb-label">Today I'm:</span>
@@ -186,7 +192,10 @@
     <div class="suggest" id="suggest"></div>
 
     <div class="filters">
-      <div class="chip active" data-view="all">All</div>
+      <div class="loc-toggle" id="locToggle">
+        <button data-l="all" class="sel">All</button><button data-l="work">📍 Work</button><button data-l="home">🏠 Home</button>
+      </div>
+      <div class="chip active" data-view="all">Any horizon</div>
       <div class="chip" data-view="now">Now</div>
       <div class="chip" data-view="next">Next</div>
       <div class="chip" data-view="later">Later</div>
@@ -197,8 +206,9 @@
       </select>
       <div class="spacer"></div>
       <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">
-        <input type="checkbox" id="hideDone"> Hide done
-      </label>
+        <input type="checkbox" id="anxFilter"> Needs a nudge</label>
+      <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">
+        <input type="checkbox" id="hideDone"> Hide done</label>
     </div>
   </header>
   <div class="board cols" id="board"></div>
@@ -206,7 +216,7 @@
 
 <div id="focus">
   <div class="focus-card">
-    <div class="focus-eyebrow">One thing right now</div>
+    <div class="focus-eyebrow" id="fEyebrow">One thing right now</div>
     <div class="focus-title" id="fTitle">—</div>
     <div class="focus-notes" id="fNotes"></div>
     <div class="focus-meta" id="fMeta"></div>
@@ -216,7 +226,7 @@
       <button id="tReset" class="btn-ghost">Reset</button>
     </div>
     <div class="focus-actions">
-      <button class="btn-primary" id="fDone">&#10003; Done</button>
+      <button class="btn-primary" id="fDone">&#10003; Update / done</button>
       <button id="fSkip">Next task →</button>
       <button class="btn-ghost" id="fClose">Close</button>
     </div>
@@ -245,20 +255,58 @@
         <div class="field"><label>Since</label><input id="mWaitSince" type="date"></div>
       </div>
       <div class="grid2">
+        <div class="field"><label>Location</label>
+          <select id="mLoc"><option value="">Anywhere</option><option value="work">Work</option><option value="home">Home</option></select></div>
         <div class="field"><label>Horizon</label>
           <select id="mHorizon"><option value="">—</option><option value="now">Now</option><option value="next">Next</option><option value="later">Later</option></select></div>
-        <div class="field"><label>Energy needed</label>
-          <select id="mEnergy"><option value="">—</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
       </div>
       <div class="grid2">
+        <div class="field"><label>Energy needed</label>
+          <select id="mEnergy"><option value="">—</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
         <div class="field"><label>Time estimate (min)</label><input id="mEst" type="number" min="0" step="5" placeholder="e.g. 30"></div>
+      </div>
+      <div class="grid2">
         <div class="field"><label>Repeat</label>
           <select id="mRecur"><option value="">No repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="weekdays">Weekdays</option><option value="monthly">Monthly</option></select></div>
+        <div class="field"><label>Start anxiety</label>
+          <label class="check-row"><input type="checkbox" id="mAnx"> Needs a nudge to start</label></div>
       </div>
+      <div class="field" id="mLogWrap" style="display:none"><label>Progress log</label><div id="mLog" style="font-size:12.5px;color:var(--muted)"></div></div>
     </div>
     <div class="sheet-foot">
       <button class="btn-ghost" id="mDelete" style="color:var(--hi)">Delete</button>
       <div style="display:flex;gap:8px"><button id="mCancel">Cancel</button><button class="btn-primary" id="mSave">Save</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="complete">
+  <div class="sheet">
+    <h3>Update progress <small id="cInfo"></small></h3>
+    <div class="sheet-body">
+      <div class="field"><label>What did you get done?</label>
+        <div class="seg" id="cChips">
+          <button type="button" data-v="Finished it">Finished it</button>
+          <button type="button" data-v="Did my part">Did my part</button>
+          <button type="button" data-v="Made progress">Made progress</button>
+          <button type="button" data-v="Hit a blocker">Hit a blocker</button>
+        </div>
+        <input id="cDid" placeholder="More detail (optional)" style="margin-top:8px">
+      </div>
+      <div class="field"><label>Where did you leave off?</label>
+        <input id="cResume" placeholder="So you know where to start next time (optional)"></div>
+      <div class="field"><label>What's the next stage?</label>
+        <div class="seg" id="cNext">
+          <button data-v="done">Done — close it</button>
+          <button data-v="waiting">Waiting on someone</button>
+          <button data-v="doing">Still going</button>
+          <button data-v="todo">Back to to-do</button>
+        </div>
+      </div>
+      <div class="field" id="cWaitWrap" style="display:none"><label>Waiting on</label><input id="cWaitOn" placeholder="Who / what"></div>
+    </div>
+    <div class="sheet-foot"><span></span>
+      <div style="display:flex;gap:8px"><button id="cCancel">Cancel</button><button class="btn-primary" id="cSave">Log update</button></div>
     </div>
   </div>
 </div>
@@ -291,13 +339,20 @@
 
 <script>
 /* =====================================================================
-   CONFIG — Firebase Realtime Database sync (REST, no SDK, no CDN)
-   Leave databaseURL "" to run local-only (per device).
+   CONFIG — sync. Two ways:
+   A) Direct Firebase (quick): set databaseURL.
+   B) Through your Cloudflare Worker (locked down): set proxyURL + proxyToken,
+      leave databaseURL "" (the Worker holds the Firebase creds).
+   Leave both empty to run local-only (per device).
 =====================================================================*/
-const FB = { databaseURL:"https://console.firebase.google.com/u/0/project/adhd-bipolar-organization/database/adhd-bipolar-organization-default-rtdb/data/~2F", path:"taskdesk", auth:"" };
+const FB = {
+  databaseURL:"https://adhd-bipolar-organization-default-rtdb.firebaseio.com", path:"td_k9m4x7qz2p", auth:"",
+  proxyURL:"",            // e.g. https://taskdesk.<you>.workers.dev
+  proxyToken:""           // must match the Worker's APP_TOKEN
+};
 
 /* ---- storage ---- */
-const KEY="taskdesk_v1", MKEY="taskdesk_mode", TKEY="taskdesk_templates";
+const KEY="taskdesk_v1", MKEY="taskdesk_mode", TKEY="taskdesk_templates", LKEY="taskdesk_loc";
 let memCache=null, persistent=true;
 function load(){ try{ const r=localStorage.getItem(KEY); return r?JSON.parse(r):[]; }
   catch(e){ persistent=false; return memCache||[]; } }
@@ -306,7 +361,7 @@ function saveLocal(){ try{ localStorage.setItem(KEY,JSON.stringify(tasks)); }
 function save(){ saveLocal(); fbPushDebounced(); }
 let tasks=load();
 let mode="baseline"; try{ mode=localStorage.getItem(MKEY)||"baseline"; }catch(e){}
-
+let locView="all"; try{ locView=localStorage.getItem(LKEY)||"all"; }catch(e){}
 let templates=null; try{ const r=localStorage.getItem(TKEY); if(r)templates=JSON.parse(r); }catch(e){}
 if(!templates) templates=[
   "Hi {who} — circling back on {task}. Any update? Thanks!",
@@ -315,16 +370,20 @@ if(!templates) templates=[
 ];
 function saveTpl(){ try{ localStorage.setItem(TKEY,JSON.stringify(templates)); }catch(e){} }
 
-/* ---- firebase sync ---- */
-const fbEnabled=()=>!!FB.databaseURL;
-function fbUrl(){ let u=FB.databaseURL.replace(/\/+$/,"")+"/"+FB.path+".json"; if(FB.auth)u+="?auth="+encodeURIComponent(FB.auth); return u; }
+/* ---- sync (Firebase direct OR Worker proxy) ---- */
+const fbEnabled=()=>!!(FB.proxyURL||FB.databaseURL);
+function endpoint(){
+  if(FB.proxyURL) return FB.proxyURL.replace(/\/+$/,"")+"/tasks";
+  let u=FB.databaseURL.replace(/\/+$/,"")+"/"+FB.path+".json"; if(FB.auth)u+="?auth="+encodeURIComponent(FB.auth); return u;
+}
+function fbHeaders(extra){ const h=Object.assign({},extra||{}); if(FB.proxyURL&&FB.proxyToken)h["X-TD-Key"]=FB.proxyToken; return h; }
 async function fbPull(){ if(!fbEnabled())return null;
-  try{ const r=await fetch(fbUrl(),{cache:"no-store"}); if(!r.ok)throw 0;
+  try{ const r=await fetch(endpoint(),{cache:"no-store",headers:fbHeaders()}); if(!r.ok)throw 0;
     const d=await r.json(); return Array.isArray(d)?d:(d?Object.values(d):[]); }
   catch(e){ syncNote("offline"); return null; } }
 let pushTimer=null;
 function fbPushDebounced(){ if(!fbEnabled())return; syncNote("saving"); clearTimeout(pushTimer);
-  pushTimer=setTimeout(async()=>{ try{ const r=await fetch(fbUrl(),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(tasks)});
+  pushTimer=setTimeout(async()=>{ try{ const r=await fetch(endpoint(),{method:"PUT",headers:fbHeaders({"Content-Type":"application/json"}),body:JSON.stringify(tasks)});
     syncNote(r.ok?"synced":"offline"); }catch(e){ syncNote("offline"); } },800); }
 function mergeRemote(remote){ if(!remote)return false;
   const map=new Map(); tasks.forEach(t=>map.set(t.id,t)); let changed=false;
@@ -349,7 +408,7 @@ function fmtDue(iso){ if(!iso)return"";
   return d.toLocaleString(undefined, same?{hour:"numeric",minute:"2-digit"}:{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); }
 function daysSince(iso){ if(!iso)return null; return Math.floor((now()-new Date(iso).getTime())/86400000); }
 function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
-const eRank=t=>({low:0,medium:1,high:2}[t.energy]); 
+const eRank=t=>({low:0,medium:1,high:2}[t.energy]);
 const eR=t=>(eRank(t)==null?1:eRank(t));
 const estVal=t=>parseInt(t.estimate)||30;
 const prRank={high:0,medium:1,low:2};
@@ -365,21 +424,23 @@ let view="all";
 
 /* ---- quick add ---- */
 function parseQuick(raw){
-  let t={priority:"medium",horizon:"",category:""}, text=raw;
+  let t={priority:"medium",horizon:"",category:"",loc:""}, text=raw;
   const pr=text.match(/!(high|med|medium|low)\b/i);
   if(pr){ t.priority=pr[1].toLowerCase()==="med"?"medium":pr[1].toLowerCase(); text=text.replace(pr[0],""); }
   const hz=text.match(/~(now|next|later)\b/i);
   if(hz){ t.horizon=hz[1].toLowerCase(); text=text.replace(hz[0],""); }
+  const lo=text.match(/@(work|home)\b/i);
+  if(lo){ t.loc=lo[1].toLowerCase(); text=text.replace(lo[0],""); }
   const cat=text.match(/#([^\s#]+)/);
   if(cat){ t.category=cat[1]; text=text.replace(cat[0],""); }
   t.title=text.replace(/\s+/g," ").trim(); return t;
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",waitOn:"",waitSince:"",
-  reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",anxiety:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
-  tasks.unshift(newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon}));
+  tasks.unshift(newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,loc:p.loc}));
   $("#quickAdd").value=""; save(); render(); }
 
 /* ---- recurring ---- */
@@ -389,14 +450,10 @@ function nextDate(iso,recur){ const d=iso?new Date(iso):new Date();
   else if(recur==="monthly")d.setMonth(d.getMonth()+1);
   else if(recur==="weekdays"){ do{d.setDate(d.getDate()+1);}while(d.getDay()===0||d.getDay()===6); }
   return d; }
-function toggleDone(id){ const t=tasks.find(x=>x.id===id); if(!t)return;
-  if(t.status!=="done"){ t.status="done"; t.completedAt=now(); touch(t);
-    if(t.recur){ const nd=t.due?nextDate(t.due,t.recur):null;
-      tasks.unshift(newTask({title:t.title,notes:t.notes,category:t.category,priority:t.priority,
-        horizon:t.horizon,energy:t.energy,estimate:t.estimate,recur:t.recur,
-        due:nd?localDT(nd):""})); } }
-  else { t.status="todo"; t.completedAt=null; touch(t); }
-  save(); render(); }
+function spawnRecur(t){ if(!t.recur)return; const nd=t.due?nextDate(t.due,t.recur):null;
+  tasks.unshift(newTask({title:t.title,notes:t.notes,category:t.category,priority:t.priority,
+    horizon:t.horizon,energy:t.energy,estimate:t.estimate,recur:t.recur,loc:t.loc,anxiety:t.anxiety,
+    due:nd?localDT(nd):""})); }
 
 /* ---- chase helpers ---- */
 function moveToWaiting(t){ t.status="waiting"; if(!t.waitSince)t.waitSince=todayStr();
@@ -405,11 +462,13 @@ function moveToWaiting(t){ t.status="waiting"; if(!t.waitSince)t.waitSince=today
 function snoozeChase(t){ t.due=chaseDate(3); t.reminded=false; touch(t); save(); render(); toast("Chase pushed to "+fmtDue(t.due)); }
 
 /* ---- filtering / sorting ---- */
-function visible(){ const cf=$("#catFilter").value, pf=$("#prFilter").value, hd=$("#hideDone").checked;
+function visible(){ const cf=$("#catFilter").value, pf=$("#prFilter").value, hd=$("#hideDone").checked, anx=$("#anxFilter").checked;
   return live().filter(t=>{
     if(view!=="all" && t.horizon!==view) return false;
+    if(locView!=="all" && t.loc && t.loc!==locView) return false;
     if(cf && t.category!==cf) return false;
     if(pf && t.priority!==pf) return false;
+    if(anx && !t.anxiety) return false;
     if(hd && t.status==="done") return false;
     return true; }); }
 function byPriorityThenDue(a,b){
@@ -450,23 +509,31 @@ function render(){
 }
 function card(t){
   const el=document.createElement("div");
-  el.className="task pr-"+t.priority+(t.status==="done"?" is-done":"");
+  el.className="task pr-"+t.priority+(t.status==="done"?" is-done":"")+(t.anxiety?" anx":"");
   const overdue=t.due && new Date(t.due)<new Date() && t.status!=="done";
   const tags=[];
+  if(t.loc) tags.push('<span class="tag tag-loc">'+(t.loc==="work"?"📍 work":"🏠 home")+'</span>');
   if(t.category) tags.push('<span class="tag tag-cat">'+esc(t.category)+'</span>');
   if(t.due){ const lbl=t.status==="waiting"?"chase ":""; const od=overdue?(t.status==="waiting"?" · now":" · overdue"):"";
     tags.push('<span class="tag tag-due '+(overdue?"overdue":"")+'">&#9200; '+lbl+fmtDue(t.due)+od+'</span>'); }
+  if(t.anxiety) tags.push('<span class="tag tag-anx">needs a nudge</span>');
   if(t.horizon) tags.push('<span class="tag tag-horizon">'+t.horizon+'</span>');
   if(t.estimate) tags.push('<span class="tag tag-est">~'+t.estimate+'m</span>');
   if(t.energy) tags.push('<span class="tag tag-energy">'+t.energy+' energy</span>');
   if(t.recur) tags.push('<span class="tag tag-recur">&#8635; '+t.recur+'</span>');
   if(t.status==="waiting"){ const since=t.waitSince?" · "+daysSince(t.waitSince)+"d":"";
     tags.push('<span class="tag tag-wait">waiting'+(t.waitOn?": "+esc(t.waitOn):"")+since+'</span>'); }
+  const last=t.log&&t.log.length?t.log[t.log.length-1]:null;
+  let prog="";
+  if(last){ const bits=[]; if(last.summary)bits.push(last.summary); if(last.did)bits.push(last.did);
+    prog=bits.map(esc).join(" — ");
+    if(last.resume) prog+=(prog?'<br>':'')+'<b>▶ pick up:</b> '+esc(last.resume); }
   const act=t.status==="todo"||t.status==="doing";
   el.innerHTML=
     '<div class="check '+(t.status==="done"?"on":"")+'" role="checkbox" aria-checked="'+(t.status==="done")+'" tabindex="0" data-act="check"></div>'+
     '<div class="t-body"><div class="t-title">'+esc(t.title)+'</div>'+
     (t.notes?'<div class="t-notes">'+esc(t.notes)+'</div>':"")+
+    (prog?'<div class="t-prog">↳ '+prog+'</div>':"")+
     (tags.length?'<div class="t-meta">'+tags.join("")+'</div>':"")+'</div>'+
     '<div class="t-actions">'+
     (act?'<button class="icon-btn" data-act="start" title="Start now (focus)">&#9654;</button>':"")+
@@ -474,9 +541,9 @@ function card(t){
     (t.status==="waiting"?'<button class="icon-btn" data-act="chase" title="Copy a follow-up message">&#128203;</button>':"")+
     (t.status==="waiting"?'<button class="icon-btn" data-act="snooze" title="Push chase 3 days">&#128564;</button>':"")+
     '<button class="icon-btn" data-act="edit" title="Edit">&#9998;</button></div>';
-  el.querySelector('[data-act="check"]').onclick=()=>toggleDone(t.id);
-  el.querySelector('[data-act="check"]').onkeydown=e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();toggleDone(t.id);}};
   const q=s=>el.querySelector(s);
+  q('[data-act="check"]').onclick=()=>{ if(t.status==="done"){ t.status="todo"; t.completedAt=null; touch(t); save(); render(); } else openComplete(t.id); };
+  q('[data-act="check"]').onkeydown=e=>{ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); q('[data-act="check"]').onclick(); } };
   if(q('[data-act="start"]')) q('[data-act="start"]').onclick=()=>openFocusOn(t.id);
   if(q('[data-act="wait"]')) q('[data-act="wait"]').onclick=()=>moveToWaiting(t);
   if(q('[data-act="chase"]')) q('[data-act="chase"]').onclick=()=>openChase(t);
@@ -500,7 +567,7 @@ function renderAlerts(){ const soon=new Date(now()+3600000), nowD=new Date();
 /* ---- mode-based suggestions ---- */
 function renderSuggest(){
   const box=$("#suggest"); box.className="suggest";
-  const act=live().filter(t=>t.status==="todo"||t.status==="doing");
+  const act=visible().filter(t=>t.status==="todo"||t.status==="doing");
   if(mode==="baseline"||!act.length){ box.classList.remove("show"); box.innerHTML=""; return; }
   let picks,head,sub;
   if(mode==="depressive"){
@@ -516,9 +583,9 @@ function renderSuggest(){
   picks.forEach(t=>{ const c=document.createElement("div"); c.className="sg-card pr-"+t.priority;
     c.innerHTML='<div class="sg-title">'+esc(t.title)+'</div><div class="sg-meta">'+
       (t.category?esc(t.category)+(t.estimate?" · ":""):"")+(t.estimate?"~"+t.estimate+"m":"")+(t.energy?" · "+t.energy+" energy":"")+'</div>'+
-      '<div class="sg-actions"><button class="sg-start">&#9654; Start</button><button class="sg-done" title="Mark done">&#10003;</button></div>';
+      '<div class="sg-actions"><button class="sg-start">&#9654; Start</button><button class="sg-done" title="Update / done">&#10003;</button></div>';
     c.querySelector(".sg-start").onclick=()=>openFocusOn(t.id);
-    c.querySelector(".sg-done").onclick=()=>toggleDone(t.id);
+    c.querySelector(".sg-done").onclick=()=>openComplete(t.id);
     row.appendChild(c); });
   box.appendChild(row);
 }
@@ -529,7 +596,9 @@ function setMode(m){ mode=m; try{localStorage.setItem(MKEY,m);}catch(e){}
     baseline:"Standard view — sorted by priority and due date.",
     manic:"Sorting toward high-priority work and surfacing what actually moves the needle, so the energy lands on the right things."
   }[m]||"";
-  resetTimer(); $("#tStart").textContent=startLabel(); render(); }
+  resetTimer(); render(); }
+function setLoc(l){ locView=l; try{localStorage.setItem(LKEY,l);}catch(e){}
+  document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l===l)); render(); }
 
 /* ---- reminders ---- */
 function checkReminders(){
@@ -554,8 +623,18 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   $("#mEst").value=t.estimate||""; $("#mEnergy").value=t.energy||"";
   $("#mHorizon").value=t.horizon||""; $("#mRecur").value=t.recur||"";
   $("#mWaitOn").value=t.waitOn||""; $("#mWaitSince").value=t.waitSince||"";
+  $("#mLoc").value=t.loc||""; $("#mAnx").checked=!!t.anxiety;
   setSeg("#mPr",t.priority); setSeg("#mStatus",t.status);
   $("#waitWrap").style.display=t.status==="waiting"?"grid":"none";
+  const lg=t.log||[];
+  if(lg.length){ $("#mLogWrap").style.display="grid";
+    $("#mLog").innerHTML=lg.slice().reverse().map(e=>{
+      const when=new Date(e.t).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+      const parts=[]; if(e.summary)parts.push(e.summary); if(e.did)parts.push(e.did);
+      let s=when+' — '+esc(parts.join(": ")||"(update)");
+      if(e.resume) s+=' · pick up: '+esc(e.resume);
+      return '<div>'+s+' → '+e.next+'</div>'; }).join(""); }
+  else $("#mLogWrap").style.display="none";
   refreshCats(); $("#modal").classList.add("show"); }
 function setSeg(sel,val){ document.querySelectorAll(sel+" button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val)); }
 function getSeg(sel){ const b=document.querySelector(sel+" button.sel"); return b?b.dataset.v:""; }
@@ -566,6 +645,7 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.category=$("#mCat").value.trim(); t.due=$("#mDue").value;
   t.estimate=$("#mEst").value; t.energy=$("#mEnergy").value;
   t.horizon=$("#mHorizon").value; t.recur=$("#mRecur").value;
+  t.loc=$("#mLoc").value; t.anxiety=$("#mAnx").checked;
   t.priority=getSeg("#mPr")||"medium";
   const ns=getSeg("#mStatus")||"todo";
   if(ns==="done"&&t.status!=="done")t.completedAt=now();
@@ -576,6 +656,29 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
 $("#mDelete").onclick=()=>{ if(confirm("Delete this task?")){ const t=tasks.find(x=>x.id===editId); if(t){t.deleted=true;touch(t);} save(); closeModal(); render(); } };
 $("#mCancel").onclick=closeModal;
 function closeModal(){ $("#modal").classList.remove("show"); editId=null; }
+
+/* ---- completion / progress modal ---- */
+let completeId=null;
+function openComplete(id){ completeId=id; const t=tasks.find(x=>x.id===id); if(!t)return;
+  $("#cInfo").textContent="· "+t.title; $("#cDid").value=""; $("#cResume").value="";
+  document.querySelectorAll("#cChips button").forEach(b=>b.classList.remove("sel"));
+  setSeg("#cNext","done"); $("#cWaitWrap").style.display="none";
+  $("#cWaitOn").value=t.waitOn||"";
+  $("#complete").classList.add("show"); setTimeout(()=>$("#cDid").focus(),50); }
+document.querySelectorAll("#cChips button").forEach(b=>b.onclick=()=>{ const was=b.classList.contains("sel");
+  document.querySelectorAll("#cChips button").forEach(x=>x.classList.remove("sel")); if(!was)b.classList.add("sel"); });
+document.querySelectorAll("#cNext button").forEach(b=>b.onclick=()=>{ setSeg("#cNext",b.dataset.v); $("#cWaitWrap").style.display=b.dataset.v==="waiting"?"grid":"none"; });
+$("#cCancel").onclick=()=>$("#complete").classList.remove("show");
+$("#cSave").onclick=()=>{ const t=tasks.find(x=>x.id===completeId); if(!t)return;
+  const summary=getSeg("#cChips"); const did=$("#cDid").value.trim(); const resume=$("#cResume").value.trim(); const next=getSeg("#cNext")||"done";
+  if(!t.log)t.log=[]; t.log.push({t:now(),summary:summary,did:did,resume:resume,next:next});
+  if(next==="done"){ t.status="done"; t.completedAt=now(); spawnRecur(t); }
+  else if(next==="waiting"){ t.status="waiting"; if(!t.waitSince)t.waitSince=todayStr();
+    t.waitOn=$("#cWaitOn").value.trim()||t.waitOn; if(!t.due)t.due=chaseDate(3); t.completedAt=null; }
+  else { t.status=next; t.completedAt=null; }
+  t.reminded=false; touch(t); save(); $("#complete").classList.remove("show"); render();
+  if($("#focus").classList.contains("show")) showFocus();
+  toast(next==="done"?"Logged & closed":"Logged — moved to "+next); };
 
 /* ---- chase modal ---- */
 let chaseTask=null;
@@ -607,46 +710,56 @@ $("#tplBtn").onclick=openTpl;
 
 /* ---- focus mode ---- */
 let focusIdx=0,timerInt=null;
-function defaultFocusSecs(){ return mode==="depressive"?300:1500; }
-let timerLeft=defaultFocusSecs();
-function startLabel(){ return "Start "+Math.round(defaultFocusSecs()/60)+"-min focus"; }
 function focusList(){ return visible().filter(t=>t.status==="todo"||t.status==="doing").sort(activeSort); }
+function curFocusTask(){ return focusList()[focusIdx]; }
+function focusSecsFor(t){ return (mode==="depressive"||(t&&t.anxiety))?300:1500; }
+function startLabel(){ return "Start "+Math.round(focusSecsFor(curFocusTask())/60)+"-min focus"; }
+let timerLeft=focusSecsFor(null);
 function openFocus(){ const l=focusList(); if(!l.length){ alert("No active tasks to focus on. Add one or pull from Next."); return; }
   focusIdx=0; resetTimer(); showFocus(); $("#focus").classList.add("show"); }
 function openFocusOn(id){ const l=focusList(); const i=l.findIndex(t=>t.id===id);
   focusIdx=i<0?0:i; resetTimer(); showFocus(); $("#focus").classList.add("show"); }
 function showFocus(){ const l=focusList(); if(!l.length){ closeFocus(); render(); return; }
   if(focusIdx>=l.length)focusIdx=0; const t=l[focusIdx];
-  $("#fTitle").textContent=t.title; $("#fNotes").textContent=t.notes||"";
-  const m=[]; if(t.category)m.push(t.category); if(t.estimate)m.push("~"+t.estimate+"m");
+  $("#fEyebrow").textContent=t.anxiety?"This one feels heavy — just open it. Five minutes, then you can stop.":"One thing right now";
+  const lastF=t.log&&t.log.length?t.log[t.log.length-1]:null;
+  let fn=t.notes||"";
+  if(lastF&&lastF.resume) fn=(fn?fn+"\n\n":"")+"▶ Pick up: "+lastF.resume;
+  $("#fTitle").textContent=t.title; $("#fNotes").textContent=fn;
+  const m=[]; if(t.loc)m.push(t.loc); if(t.category)m.push(t.category); if(t.estimate)m.push("~"+t.estimate+"m");
   if(t.priority)m.push(t.priority+" priority"); if(t.energy)m.push(t.energy+" energy");
   $("#fMeta").innerHTML=m.map(x=>'<span class="tag tag-cat">'+esc(x)+'</span>').join("");
+  if(!timerInt){ timerLeft=focusSecsFor(t); updTimer(); } $("#tStart").textContent=startLabel();
   $("#focus").dataset.tid=t.id; }
 function closeFocus(){ $("#focus").classList.remove("show"); stopTimer(); }
 $("#focusBtn").onclick=openFocus; $("#fClose").onclick=closeFocus;
 $("#fSkip").onclick=()=>{ focusIdx++; stopTimer(); resetTimer(); showFocus(); };
-$("#fDone").onclick=()=>{ toggleDone($("#focus").dataset.tid); stopTimer(); resetTimer(); showFocus(); };
+$("#fDone").onclick=()=>{ openComplete($("#focus").dataset.tid); };
 function tick(){ timerLeft--; updTimer(); if(timerLeft<=0){ stopTimer(); try{ if(Notification.permission==="granted")new Notification("Focus block done",{body:"Nice. Take a short break."}); }catch(e){} } }
 function updTimer(){ const m=Math.floor(timerLeft/60),s=timerLeft%60; $("#timer").textContent=m+":"+pad(s); }
 function stopTimer(){ if(timerInt){clearInterval(timerInt);timerInt=null;} $("#tStart").textContent=startLabel(); }
-function resetTimer(){ timerLeft=defaultFocusSecs(); updTimer(); }
+function resetTimer(){ if(!timerInt){ timerLeft=focusSecsFor(curFocusTask()); updTimer(); } $("#tStart").textContent=startLabel(); }
 $("#tStart").onclick=()=>{ if(timerInt){stopTimer();} else { timerInt=setInterval(tick,1000); $("#tStart").textContent="Pause"; } };
 $("#tReset").onclick=()=>{ stopTimer(); resetTimer(); };
 
 /* ---- CSV export ---- */
 $("#exportBtn").onclick=()=>{
-  const cols=["title","category","priority","status","horizon","energy","estimate","due","recur","waitOn","waitSince","notes"];
-  const rows=live().map(t=>cols.map(c=>{ const v=(t[c]==null?"":t[c]).toString().replace(/"/g,'""'); return /[",\n]/.test(v)?'"'+v+'"':v; }).join(","));
+  const cols=["title","category","priority","status","loc","anxiety","horizon","energy","estimate","due","recur","waitOn","waitSince","notes","lastUpdate","pickUpNext"];
+  const rows=live().map(t=>{ const le=t.log&&t.log.length?t.log[t.log.length-1]:null;
+    const lastUpdate=le?[le.summary,le.did].filter(Boolean).join(": "):""; const pickUpNext=le?(le.resume||""):"";
+    return cols.map(c=>{ let v; if(c==="anxiety")v=t.anxiety?"yes":""; else if(c==="lastUpdate")v=lastUpdate; else if(c==="pickUpNext")v=pickUpNext; else v=(t[c]==null?"":t[c]);
+      v=v.toString().replace(/"/g,'""'); return /[",\n]/.test(v)?'"'+v+'"':v; }).join(","); });
   const blob=new Blob([cols.join(",")+"\n"+rows.join("\n")],{type:"text/csv"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="taskdesk-"+todayStr()+".csv"; a.click(); };
 
 /* ---- controls ---- */
 $("#addBtn").onclick=addQuick;
 $("#quickAdd").addEventListener("keydown",e=>{ if(e.key==="Enter")addQuick(); });
-$("#catFilter").onchange=render; $("#prFilter").onchange=render; $("#hideDone").onchange=render;
+$("#catFilter").onchange=render; $("#prFilter").onchange=render; $("#hideDone").onchange=render; $("#anxFilter").onchange=render;
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
 document.querySelectorAll("#modebar button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); } });
+document.querySelectorAll("#locToggle button").forEach(b=>b.onclick=()=>setLoc(b.dataset.l));
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); } });
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkReminders(); syncPull(); } });
 
 /* ---- purge old tombstones ---- */
@@ -656,13 +769,14 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkRe
 /* ---- first-run seed ---- */
 if(!live().length && persistent && !fbEnabled()){
   tasks=[
-    newTask({title:"Open the MPCA form and fill the first field",category:"Steve's",priority:"high",horizon:"next",energy:"medium",estimate:"45"}),
-    newTask({title:"Confirm AR North America shipped the Bolondi spray head",category:"Steve's",priority:"medium",status:"waiting",waitOn:"AR North America",waitSince:todayStr(),due:chaseDate(3),notes:"Done my part — vendor needs to confirm."}),
-    newTask({title:"Reply to one easy email",category:"Steve's",priority:"low",energy:"low",estimate:"5"})
+    newTask({title:"Open the MPCA form and fill the first field",category:"Steve's",loc:"work",priority:"high",horizon:"next",energy:"medium",estimate:"45",anxiety:true}),
+    newTask({title:"Confirm AR North America shipped the Bolondi spray head",category:"Steve's",loc:"work",priority:"medium",status:"waiting",waitOn:"AR North America",waitSince:todayStr(),due:chaseDate(3),notes:"Done my part — vendor needs to confirm."}),
+    newTask({title:"Reply to one easy email",category:"Steve's",loc:"work",priority:"low",energy:"low",estimate:"5"})
   ]; saveLocal();
 }
 
 /* ---- boot ---- */
+document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l===locView));
 setMode(mode); checkReminders();
 if("Notification" in window && Notification.permission==="granted") $("#notifyBtn").textContent="🔔 Reminders on";
 if(fbEnabled()){ syncPull(); setInterval(syncPull,15000); }
