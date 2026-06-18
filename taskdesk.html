@@ -265,23 +265,29 @@
         <div class="field"><label>Waiting on</label><input id="mWaitOn" placeholder="Who / what"></div>
         <div class="field"><label>Since</label><input id="mWaitSince" type="date"></div>
       </div>
+      <div class="field"><label>Location (check all that apply)</label>
+        <div id="mLocChecks" style="display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center">
+          <label class="check-row"><input type="checkbox" class="mLocBox" value="work"> 📍 Work</label>
+          <label class="check-row"><input type="checkbox" class="mLocBox" value="home"> 🏠 Home</label>
+          <label class="check-row"><input type="checkbox" class="mLocBox" value="cabin"> 🌲 Cabin</label>
+          <label class="check-row"><input type="checkbox" class="mLocBox" value="newhouse"> 🏡 New House</label>
+          <label class="check-row"><input type="checkbox" id="mLocOther"> 📌 Other:</label>
+          <input id="mLocOtherText" placeholder="custom location" style="flex:1;min-width:140px;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:14px;font-family:inherit">
+        </div>
+      </div>
       <div class="grid2">
-        <div class="field"><label>Location</label>
-          <select id="mLoc"><option value="">Anywhere</option><option value="work">Work</option><option value="home">Home</option><option value="cabin">Cabin</option><option value="newhouse">New House</option></select></div>
         <div class="field"><label>Best time</label>
           <select id="mWhen"><option value="">—</option><option value="wkday_morning">Weekday morning</option><option value="after_work">Weekday after work</option><option value="weekend">Weekend</option><option value="anytime">Anytime</option></select></div>
-      </div>
-      <div class="grid2">
         <div class="field"><label>Horizon</label>
           <select id="mHorizon"><option value="">—</option><option value="now">Now</option><option value="next">Next</option><option value="later">Later</option></select></div>
-        <div class="field"><label>Energy needed</label>
-          <select id="mEnergy"><option value="">—</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
       </div>
       <div class="grid2">
+        <div class="field"><label>Energy needed</label>
+          <select id="mEnergy"><option value="">—</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
         <div class="field"><label>Time estimate (min)</label><input id="mEst" type="number" min="0" step="5" placeholder="e.g. 30"></div>
-        <div class="field"><label>Start anxiety</label>
-          <label class="check-row"><input type="checkbox" id="mAnx"> Needs a nudge to start</label></div>
       </div>
+      <div class="field"><label>Start anxiety</label>
+        <label class="check-row"><input type="checkbox" id="mAnx"> Needs a nudge to start</label></div>
       <div class="field"><label>Repeat</label>
         <select id="mRecur">
           <option value="">No repeat</option>
@@ -442,6 +448,8 @@ function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">"
 const eRank=t=>({low:0,medium:1,high:2}[t.energy]);
 const eR=t=>(eRank(t)==null?1:eRank(t));
 const estVal=t=>parseInt(t.estimate)||30;
+function taskLocs(t){ if(Array.isArray(t.locs)) return t.locs.filter(Boolean); return t.loc?[t.loc]:[]; }
+function locLabel(v){ return {work:"📍 work",home:"🏠 home",cabin:"🌲 cabin",newhouse:"🏡 new house"}[v] || ("📌 "+v); }
 const prRank={high:0,medium:1,low:2};
 function syncNote(state){ const el=$("#storeNote"); if(!el)return;
   if(fbEnabled()) el.textContent={saving:"syncing…",synced:"synced across devices",offline:"offline — will sync"}[state]||"synced across devices";
@@ -470,10 +478,10 @@ function parseQuick(raw){
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",recurOrd:1,recurDow:1,whenHint:"",waitOn:"",waitSince:"",
-  loc:"",helpFor:"",anxiety:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",locs:[],helpFor:"",anxiety:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
-  const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,loc:p.loc,helpFor:p.helpFor});
+  const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,locs:p.loc?[p.loc]:[],helpFor:p.helpFor});
   tasks.unshift(t); $("#quickAdd").value=""; save(); render(); openEdit(t.id); }
 
 /* ---- recurring ---- */
@@ -505,7 +513,7 @@ function nextDate(iso,t){ const recur=t.recur; const base=iso?new Date(iso):new 
 function spawnRecur(t){ if(!t.recur)return; const nd=nextDate(t.due||localDT(new Date()), t);
   tasks.unshift(newTask({title:t.title,notes:t.notes,category:t.category,priority:t.priority,
     horizon:t.horizon,energy:t.energy,estimate:t.estimate,recur:t.recur,recurOrd:t.recurOrd,recurDow:t.recurDow,
-    whenHint:t.whenHint,loc:t.loc,anxiety:t.anxiety,
+    whenHint:t.whenHint,loc:t.loc,locs:(t.locs||[]).slice(),anxiety:t.anxiety,
     due:nd?localDT(nd):""})); }
 function recurLabel(t){ return {daily:"daily",weekly:"weekly",biweekly:"every 2 wks",weekdays:"weekdays",
   monthly:"monthly",bimonthly:"every 2 mo",quarterly:"quarterly",semiannual:"twice/yr",annual:"yearly",
@@ -526,7 +534,7 @@ function visible(){
   const cf=$("#catFilter").value, pf=$("#prFilter").value, hd=$("#hideDone").checked, anx=$("#anxFilter").checked, prom=$("#promisedFilter").checked;
   return live().filter(t=>{
     if(view!=="all" && t.horizon!==view) return false;
-    if(locView!=="all" && t.loc && t.loc!==locView) return false;
+    if(locView!=="all"){ const ls=taskLocs(t); if(ls.length && !ls.includes(locView)) return false; }
     if(cf && t.category!==cf) return false;
     if(pf && t.priority!==pf) return false;
     if(anx && !t.anxiety) return false;
@@ -574,8 +582,7 @@ function card(t){
   el.className="task pr-"+t.priority+(t.status==="done"?" is-done":"")+(t.anxiety?" anx":"");
   const overdue=t.due && new Date(t.due)<new Date() && t.status!=="done";
   const tags=[];
-  if(t.loc){ const lm={work:"📍 work",home:"🏠 home",cabin:"🌲 cabin",newhouse:"🏡 new house"}[t.loc]||t.loc;
-    tags.push('<span class="tag tag-loc">'+lm+'</span>'); }
+  { const ls=taskLocs(t); if(ls.length) tags.push('<span class="tag tag-loc">'+ls.map(locLabel).join(" · ")+'</span>'); }
   if(t.helpFor) tags.push('<span class="tag tag-help">🤝 for '+esc(t.helpFor)+'</span>');
   if(t.category) tags.push('<span class="tag tag-cat">'+esc(t.category)+'</span>');
   if(t.due){ const lbl=t.status==="waiting"?"chase ":""; const od=overdue?(t.status==="waiting"?" · now":" · overdue"):"";
@@ -644,7 +651,7 @@ function scoreTask(t, ctx){ let s=0;
   if(t.due){ const diff=new Date(t.due).getTime()-now();
     if(diff<=0) s+=50; else if(diff<=86400000) s+=25; else if(diff<=3*86400000) s+=10; }
   // location match with where you likely are
-  if(t.loc && t.loc===ctx.physLoc) s+=20; else if(!t.loc) s+=5;
+  { const ls=taskLocs(t); if(ls.length && ls.includes(ctx.physLoc)) s+=20; else if(!ls.length) s+=5; }
   // best-time match
   if(t.whenHint==="weekend" && ctx.weekend) s+=20;
   if(t.whenHint==="after_work" && ctx.afterWork) s+=20;
@@ -730,7 +737,11 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   $("#mRecurOrd").value=(t.recurOrd==null?1:t.recurOrd); $("#mRecurDow").value=(t.recurDow==null?1:t.recurDow);
   $("#mWhen").value=t.whenHint||"";
   $("#mWaitOn").value=t.waitOn||""; $("#mWaitSince").value=t.waitSince||"";
-  $("#mLoc").value=t.loc||""; $("#mAnx").checked=!!t.anxiety; $("#mHelp").value=t.helpFor||"";
+  { const ls=taskLocs(t); const presets=["work","home","cabin","newhouse"];
+    document.querySelectorAll(".mLocBox").forEach(b=>b.checked=ls.includes(b.value));
+    const other=ls.find(l=>!presets.includes(l))||"";
+    $("#mLocOther").checked=!!other; $("#mLocOtherText").value=other; }
+  $("#mAnx").checked=!!t.anxiety; $("#mHelp").value=t.helpFor||"";
   setSeg("#mPr",t.priority); setSeg("#mStatus",t.status);
   $("#waitWrap").style.display=t.status==="waiting"?"grid":"none";
   refreshDueDow(); refreshNthWrap();
@@ -750,6 +761,7 @@ $("#mRecur").addEventListener("change",refreshNthWrap);
 function setSeg(sel,val){ document.querySelectorAll(sel+" button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val)); }
 function getSeg(sel){ const b=document.querySelector(sel+" button.sel"); return b?b.dataset.v:""; }
 document.querySelectorAll("#mPr button").forEach(b=>b.onclick=()=>setSeg("#mPr",b.dataset.v));
+$("#mLocOtherText").addEventListener("input",()=>{ $("#mLocOther").checked=$("#mLocOtherText").value.trim()!==""; });
 document.querySelectorAll("#mStatus button").forEach(b=>b.onclick=()=>{ setSeg("#mStatus",b.dataset.v); $("#waitWrap").style.display=b.dataset.v==="waiting"?"grid":"none"; });
 $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.title=$("#mName").value.trim()||t.title; t.notes=$("#mNotes").value.trim();
@@ -758,7 +770,10 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.horizon=$("#mHorizon").value; t.recur=$("#mRecur").value;
   t.recurOrd=parseInt($("#mRecurOrd").value); t.recurDow=parseInt($("#mRecurDow").value);
   t.whenHint=$("#mWhen").value;
-  t.loc=$("#mLoc").value; t.anxiety=$("#mAnx").checked; t.helpFor=$("#mHelp").value.trim();
+  { const arr=[]; document.querySelectorAll(".mLocBox").forEach(b=>{ if(b.checked)arr.push(b.value); });
+    const other=$("#mLocOtherText").value.trim(); if(other)arr.push(other);
+    t.locs=arr; t.loc=arr[0]||""; }
+  t.anxiety=$("#mAnx").checked; t.helpFor=$("#mHelp").value.trim();
   t.priority=getSeg("#mPr")||"medium";
   const ns=getSeg("#mStatus")||"todo";
   if(ns==="done"&&t.status!=="done")t.completedAt=now();
@@ -839,7 +854,7 @@ function showFocus(){ const l=focusList(); if(!l.length){ closeFocus(); render()
   let fn=t.notes||"";
   if(lastF&&lastF.resume) fn=(fn?fn+"\n\n":"")+"▶ Pick up: "+lastF.resume;
   $("#fTitle").textContent=t.title; $("#fNotes").textContent=fn;
-  const m=[]; if(t.loc)m.push(t.loc); if(t.category)m.push(t.category); if(t.estimate)m.push("~"+t.estimate+"m");
+  const m=[]; taskLocs(t).forEach(l=>m.push(l)); if(t.category)m.push(t.category); if(t.estimate)m.push("~"+t.estimate+"m");
   if(t.priority)m.push(t.priority+" priority"); if(t.energy)m.push(t.energy+" energy");
   $("#fMeta").innerHTML=m.map(x=>'<span class="tag tag-cat">'+esc(x)+'</span>').join("");
   if(!timerInt){ timerLeft=focusSecsFor(t); updTimer(); } $("#tStart").textContent=startLabel();
@@ -857,10 +872,10 @@ $("#tReset").onclick=()=>{ stopTimer(); resetTimer(); };
 
 /* ---- CSV export ---- */
 $("#exportBtn").onclick=()=>{
-  const cols=["title","category","priority","status","loc","helpFor","anxiety","horizon","energy","estimate","due","recur","waitOn","waitSince","notes","lastUpdate","pickUpNext"];
+  const cols=["title","category","priority","status","locations","helpFor","anxiety","horizon","energy","estimate","due","recur","waitOn","waitSince","notes","lastUpdate","pickUpNext"];
   const rows=live().map(t=>{ const le=t.log&&t.log.length?t.log[t.log.length-1]:null;
     const lastUpdate=le?[le.summary,le.did].filter(Boolean).join(": "):""; const pickUpNext=le?(le.resume||""):"";
-    return cols.map(c=>{ let v; if(c==="anxiety")v=t.anxiety?"yes":""; else if(c==="lastUpdate")v=lastUpdate; else if(c==="pickUpNext")v=pickUpNext; else v=(t[c]==null?"":t[c]);
+    return cols.map(c=>{ let v; if(c==="anxiety")v=t.anxiety?"yes":""; else if(c==="lastUpdate")v=lastUpdate; else if(c==="pickUpNext")v=pickUpNext; else if(c==="locations")v=taskLocs(t).join(" | "); else v=(t[c]==null?"":t[c]);
       v=v.toString().replace(/"/g,'""'); return /[",\n]/.test(v)?'"'+v+'"':v; }).join(","); });
   const blob=new Blob([cols.join(",")+"\n"+rows.join("\n")],{type:"text/csv"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="taskdesk-"+todayStr()+".csv"; a.click(); };
@@ -884,9 +899,9 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkRe
 /* ---- first-run seed ---- */
 if(!live().length && persistent && !fbEnabled()){
   tasks=[
-    newTask({title:"Open the MPCA form and fill the first field",category:"Steve's",loc:"work",priority:"high",horizon:"next",energy:"medium",estimate:"45",anxiety:true}),
-    newTask({title:"Confirm AR North America shipped the Bolondi spray head",category:"Steve's",loc:"work",priority:"medium",status:"waiting",waitOn:"AR North America",waitSince:todayStr(),due:chaseDate(3),notes:"Done my part — vendor needs to confirm."}),
-    newTask({title:"Reply to one easy email",category:"Steve's",loc:"work",priority:"low",energy:"low",estimate:"5"})
+    newTask({title:"Open the MPCA form and fill the first field",category:"Steve's",locs:["work"],priority:"high",horizon:"next",energy:"medium",estimate:"45",anxiety:true}),
+    newTask({title:"Confirm AR North America shipped the Bolondi spray head",category:"Steve's",locs:["work"],priority:"medium",status:"waiting",waitOn:"AR North America",waitSince:todayStr(),due:chaseDate(3),notes:"Done my part — vendor needs to confirm."}),
+    newTask({title:"Reply to one easy email",category:"Steve's",locs:["work"],priority:"low",energy:"low",estimate:"5"})
   ]; saveLocal();
 }
 
