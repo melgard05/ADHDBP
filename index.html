@@ -175,6 +175,9 @@
   .sub-row span{flex:1;font-size:14px}
   .tag-sub{background:#EEF2FF;color:#4F46E5}
   .tag-parent{background:#F1F5F9;color:#475569}
+  .prog-time{font-size:11px;color:var(--muted)}
+  .task.flash{animation:flashpulse 1.6s ease}
+  @keyframes flashpulse{0%,100%{box-shadow:none}25%,60%{box-shadow:0 0 0 3px var(--accent)}}
   .subcard{position:relative;border-left:3px solid var(--accent2,#C7B6FF)}
   .subcard::before{content:"↳";position:absolute;left:-13px;top:14px;color:var(--muted);font-size:13px}
   .subcard .tag-sub{display:none}
@@ -229,7 +232,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 27</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 28</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -546,7 +549,7 @@ const FB = {
 };
 /* Phase 2 — background reminders. After you deploy the Worker, paste its URL into workerURL. */
 const PUSH = {
-  workerURL:"https://adhdbp-push.melgard05.workers.dev",   // <-- paste your Worker URL here, e.g. https://adhdbp-push.<you>.workers.dev
+  workerURL:"",   // <-- paste your Worker URL here, e.g. https://adhdbp-push.<you>.workers.dev
   vapidPublic:"BJwEA0ejHEo0itwa6cB__ayHPpjq9v_FqN8ECcmhyMz2p-n-du5nRyLpJzuGE7lnmguksbSAlsWANqSqa5iM4DU"
 };
 
@@ -875,6 +878,7 @@ function renderLaneItems(lane, items){
 function card(t){
   const el=document.createElement("div");
   el.className="task pr-"+t.priority+(t.status==="done"?" is-done":"")+(t.anxiety?" anx":"")+(isFocusToday(t)?" focus":"");
+  el.dataset.id=t.id;
   const overdue=t.due && new Date(t.due)<new Date() && t.status!=="done";
   const tags=[];
   if(isFocusToday(t)) tags.push('<span class="tag" style="background:var(--accent);color:#fff">⭐ today</span>');
@@ -904,7 +908,9 @@ function card(t){
       prog=bits.map(esc).join(" — ");
       if(last.blocker) prog+=(prog?'<br>':'')+'<b>⛔ blocked:</b> '+esc(last.blocker);
       if(last.nextStep) prog+=(prog?'<br>':'')+'<b>▶ next:</b> '+esc(last.nextStep);
-      else if(last.resume) prog+=(prog?'<br>':'')+'<b>▶ pick up:</b> '+esc(last.resume); } }
+      else if(last.resume) prog+=(prog?'<br>':'')+'<b>▶ pick up:</b> '+esc(last.resume); }
+    if(last.t){ const st=new Date(last.t).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+      prog+=(prog?'<br>':'')+'<span class="prog-time">🕒 '+esc(st)+'</span>'; } }
   const act=t.status==="todo"||t.status==="doing";
   el.innerHTML=
     '<div class="check '+(t.status==="done"?"on":"")+'" role="checkbox" aria-checked="'+(t.status==="done")+'" tabindex="0" data-act="check"></div>'+
@@ -945,10 +951,20 @@ function renderAlerts(){ const soon=new Date(now()+3600000), nowD=new Date();
   const overdue=due.filter(t=>new Date(t.due)<nowD);
   box.classList.add("show");
   const needPerm=("Notification" in window) && Notification.permission!=="granted";
-  box.innerHTML='<div class="alert-card"><strong>&#9200; '+(overdue.length?overdue.length+" due now":due.length+" coming up")+'</strong>'+
+  box.innerHTML='<div class="alert-card" style="cursor:pointer"><strong>&#9200; '+(overdue.length?overdue.length+" due now":due.length+" coming up")+' &rsaquo;</strong>'+
     '<span style="color:var(--muted);font-size:13px">'+due.slice(0,3).map(t=>esc(t.title)).join(" · ")+(due.length>3?" …":"")+'</span>'+
     (needPerm?'<button id="alertEnable" class="btn-ghost" style="margin-top:6px;font-size:12px;color:var(--accent)">🔔 Turn on notifications to get pinged</button>':"")+'</div>';
-  if(needPerm){ const b=$("#alertEnable"); if(b) b.onclick=enableReminders; } }
+  box.querySelector(".alert-card").onclick=goToDue;
+  if(needPerm){ const b=$("#alertEnable"); if(b) b.onclick=(e)=>{ e.stopPropagation(); enableReminders(); }; } }
+function goToDue(){
+  $("#search").value=""; $("#searchClear").style.display="none";
+  view="all"; document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("active",x.dataset.view==="all"));
+  $("#sortBy").value="due"; try{localStorage.setItem("td_sort","due");}catch(e){}
+  render();
+  const dueTasks=live().filter(t=>t.status!=="done"&&t.due&&new Date(t.due)<=new Date()).sort((a,b)=>new Date(a.due)-new Date(b.due));
+  if(dueTasks.length){ const el=document.querySelector('.task[data-id="'+dueTasks[0].id+'"]');
+    if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); el.classList.add("flash"); setTimeout(()=>el.classList.remove("flash"),1600); } }
+}
 
 /* ---- recommendations / suggestions ---- */
 function timeContext(){ const d=new Date(); const day=d.getDay(); const h=d.getHours();
