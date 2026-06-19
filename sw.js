@@ -4,8 +4,8 @@
    - Focuses the app when a notification is clicked.
    - Receives Web Push (for the future push backend). */
 
-const CACHE = "taskdesk-v2";   // bumped -> clears the old stuck cache
-const ASSETS = ["taskdesk.html", "manifest.json", "icon-192.png", "icon-512.png"];
+const CACHE = "taskdesk-v3";   // bumped for the index.html move
+const ASSETS = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(
@@ -34,7 +34,7 @@ self.addEventListener("fetch", e => {
       const copy = resp.clone();
       caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
       return resp;
-    }).catch(() => caches.match(req).then(c => c || caches.match("taskdesk.html")))
+    }).catch(() => caches.match(req).then(c => c || caches.match("index.html")))
   );
 });
 
@@ -43,7 +43,7 @@ self.addEventListener("notificationclick", e => {
   e.waitUntil(
     self.clients.matchAll({ type: "window" }).then(list => {
       for (const c of list) { if ("focus" in c) return c.focus(); }
-      if (self.clients.openWindow) return self.clients.openWindow("taskdesk.html");
+      if (self.clients.openWindow) return self.clients.openWindow("./");
     })
   );
 });
