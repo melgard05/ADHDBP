@@ -149,8 +149,19 @@
   .focus-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .timer{font-size:42px;font-weight:800;letter-spacing:-.02em;margin:8px 0;font-variant-numeric:tabular-nums}
   .timer-row{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
-  #modal,#chase,#tpl,#complete{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
-  #modal.show,#chase.show,#tpl.show,#complete.show{display:grid}
+  #modal,#chase,#tpl,#complete,#recap{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
+  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show{display:grid}
+  #micBtn.rec{background:var(--hi);color:#fff;animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  .task.focus{box-shadow:inset 4px 0 0 var(--accent)}
+  .icon-btn.star-on{color:var(--accent)}
+  .tag-stale{background:#FFF3E0;color:#B45309}
+  .tag-snz{background:#EEF2FF;color:#6366F1}
+  .gcal-link{display:inline-block;margin-top:6px;font-size:12.5px;color:var(--accent);text-decoration:none;font-weight:700}
+  .recap-day{margin:0 0 14px}
+  .recap-day h4{margin:0 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .recap-item{padding:7px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;font-size:14px}
+  .recap-empty{color:var(--muted);font-size:14px;padding:8px 0}
   .sheet{background:var(--panel);border-radius:18px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(20,25,45,.3)}
   .sheet h3{padding:18px 20px;border-bottom:1px solid var(--line);font-size:16px}
   .sheet h3 small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
@@ -184,9 +195,11 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">TaskDesk <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 17</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">TaskDesk <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 18</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
+        <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127919; Pick one</button>
+        <button class="btn-ghost" id="recapBtn" title="What I finished this week">&#128202; Week</button>
         <button class="btn-ghost" id="notifyBtn" title="Turn on reminders">&#128276; Reminders</button>
         <button class="btn-ghost" id="tplBtn" title="Edit follow-up message templates">&#9881; Templates</button>
         <button class="btn-ghost" id="exportBtn" title="Download CSV">&#11015; CSV</button>
@@ -194,6 +207,7 @@
     </div>
     <div class="capture">
       <input id="quickAdd" placeholder="Brain dump — type a task and press Enter…" autocomplete="off">
+      <button class="btn-ghost" id="micBtn" title="Add by voice">&#127908;</button>
       <button class="btn-primary" id="addBtn">Add</button>
     </div>
     <div class="hint">Shortcuts: <b>!high</b> <b>!med</b> <b>!low</b> · <b>#category</b> · <b>~now</b> <b>~next</b> <b>~later</b> · <b>@work</b> <b>@home</b> <b>@cabin</b> <b>@newhouse</b> · <b>&amp;who</b> (promised). Try natural dates: <b>call Casey today at 17:00</b> sets the reminder (24-hour time → shows as 5:00 PM). Write the <b>next physical action</b>.</div>
@@ -219,6 +233,7 @@
       <div class="loc-toggle" id="locToggle">
         <button data-l="all" class="sel">All</button><button data-l="work">📍 Work</button><button data-l="home">🏠 Home</button><button data-l="cabin">🌲 Cabin</button><button data-l="newhouse">🏡 New House</button>
       </div>
+      <div class="chip" data-view="today" id="todayChip">⭐ Today</div>
       <div class="chip active" data-view="all">Any horizon</div>
       <div class="chip" data-view="now">Now</div>
       <div class="chip" data-view="next">Next</div>
@@ -269,7 +284,7 @@
       <div class="field"><label>Promised to help (who)</label><input id="mHelp" placeholder="Person you committed to (optional)"></div>
       <div class="grid2">
         <div class="field"><label>Category</label><input id="mCat" list="catList" placeholder="e.g. Steve's, Cards, Home"><datalist id="catList"></datalist></div>
-        <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div></div>
+        <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div><a id="mGcal" class="gcal-link" href="#" target="_blank" rel="noopener" style="display:none">📅 Add to Google Calendar</a></div>
       </div>
       <div class="field"><label>Priority</label>
         <div class="seg" id="mPr"><button data-v="high">High</button><button data-v="medium">Medium</button><button data-v="low">Low</button></div>
@@ -380,6 +395,14 @@
   </div>
 </div>
 
+<div id="recap">
+  <div class="sheet">
+    <h3>This week <small id="recapCount"></small></h3>
+    <div class="sheet-body" id="recapBody"></div>
+    <div class="sheet-foot"><span></span><button class="btn-primary" id="recapClose">Close</button></div>
+  </div>
+</div>
+
 <div id="tpl">
   <div class="sheet">
     <h3>Follow-up templates <small>Use <b>{who}</b> and <b>{task}</b> — they fill in automatically.</small></h3>
@@ -478,6 +501,38 @@ function syncNote(){ const el=$("#storeNote"); if(!el)return;
   else if(syncState==="ok"){ const t=new Date(lastSyncOk); el.textContent="✓ synced "+t.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})+" · tap to refresh"; el.style.color="var(--done)"; }
   else { el.textContent="connecting…"; el.style.color="var(--muted)"; } }
 function doneToday(){ const t=new Date(); t.setHours(0,0,0,0); return live().filter(x=>x.completedAt&&x.completedAt>=t.getTime()).length; }
+function isFocusToday(t){ return t.focusDay===todayStr(); }
+function focusCount(){ return live().filter(t=>isFocusToday(t)&&t.status!=="done").length; }
+function isSnoozed(t){ return !!(t.snoozeUntil && t.snoozeUntil>now()); }
+function staleDays(t){ if((t.status!=="todo"&&t.status!=="doing")||isSnoozed(t)||isFocusToday(t)) return 0;
+  return Math.floor((now()-(t.updatedAt||t.createdAt))/86400000); }
+function toggleFocus(t){ if(isFocusToday(t)){ t.focusDay=""; touch(t); save(); render(); return; }
+  if(focusCount()>=3){ toast("You've already got 3 for today — finish or un-star one first."); return; }
+  t.focusDay=todayStr(); touch(t); save(); render(); toast("Added to Today's 3"); }
+function snoozeTask(t){ t.snoozeUntil=now()+3*86400000; t.focusDay=""; touch(t); save(); render(); toast("Snoozed 3 days — it'll resurface."); }
+function pickOne(){ const act=live().filter(t=>(t.status==="todo"||t.status==="doing")&&!isSnoozed(t));
+  if(!act.length){ toast("Nothing to pick yet — add a task first."); return; }
+  let pick;
+  if(mode==="depressive") pick=[...act].sort((a,b)=>(eR(a)-eR(b))||(estVal(a)-estVal(b)))[0];
+  else if(mode==="manic") pick=[...act].sort((a,b)=>(prRank[a.priority]-prRank[b.priority])||(eR(b)-eR(a)))[0];
+  else { const ctx=timeContext(); pick=[...act].map(t=>[scoreTask(t,ctx),t]).sort((a,b)=>b[0]-a[0])[0][1]; }
+  openFocusOn(pick.id); }
+function gcalUrl(t){ if(!t.due) return "#"; const s=new Date(t.due); const dur=(parseInt(t.estimate)||30)*60000; const e=new Date(s.getTime()+dur);
+  const f=d=>d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"T"+pad(d.getHours())+pad(d.getMinutes())+"00";
+  let tz=""; try{ tz=Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){}
+  const p=new URLSearchParams({action:"TEMPLATE",text:t.title||"Task",dates:f(s)+"/"+f(e),details:t.notes||""});
+  if(tz) p.set("ctz",tz);
+  return "https://calendar.google.com/calendar/render?"+p.toString(); }
+function confetti(){ try{
+  if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c=document.createElement("canvas"); c.style.cssText="position:fixed;inset:0;pointer-events:none;z-index:999";
+  c.width=innerWidth; c.height=innerHeight; document.body.appendChild(c); const x=c.getContext("2d");
+  const cols=["#7C5CFF","#22C55E","#F59E0B","#EC4899","#38BDF8"]; const P=[];
+  for(let i=0;i<90;i++) P.push({x:innerWidth/2+(Math.random()-.5)*140,y:innerHeight/3,vx:(Math.random()-.5)*9,vy:Math.random()*-9-3,g:.28,r:Math.random()*5+3,c:cols[i%cols.length],rot:Math.random()*6,vr:(Math.random()-.5)*.4});
+  let f=0; (function go(){ f++; x.clearRect(0,0,c.width,c.height);
+    P.forEach(p=>{ p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; x.save(); x.translate(p.x,p.y); x.rotate(p.rot); x.fillStyle=p.c; x.fillRect(-p.r,-p.r,p.r*2,p.r*1.2); x.restore(); });
+    if(f<110) requestAnimationFrame(go); else c.remove(); })();
+}catch(e){} }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
 async function copyText(s){ try{ await navigator.clipboard.writeText(s); }
   catch(e){ const ta=document.createElement("textarea"); ta.value=s; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(_){} ta.remove(); } }
@@ -528,7 +583,7 @@ function parseQuick(raw){
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",recurOrd:1,recurDow:1,whenHint:"",waitOn:"",waitSince:"",
-  loc:"",locs:[],helpFor:"",anxiety:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
   const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,locs:p.loc?[p.loc]:[],helpFor:p.helpFor,due:p.due});
@@ -581,6 +636,7 @@ function searchActive(){ return $("#search").value.trim()!==""; }
 function visible(){
   const q=$("#search").value.trim().toLowerCase();
   if(q){ return live().filter(t=>[t.title,t.notes,t.category,t.waitOn,t.helpFor].some(f=>(f||"").toLowerCase().includes(q))); }
+  if(view==="today"){ let r=live().filter(isFocusToday); if($("#hideDone").checked) r=r.filter(t=>t.status!=="done"); return r; }
   const cf=$("#catFilter").value, pf=$("#prFilter").value, hd=$("#hideDone").checked, anx=$("#anxFilter").checked, prom=$("#promisedFilter").checked;
   return live().filter(t=>{
     if(view!=="all" && t.horizon!==view) return false;
@@ -597,6 +653,8 @@ function byPriorityThenDue(a,b){
   if(a.due) return -1; if(b.due) return 1;
   return b.createdAt-a.createdAt; }
 function activeSort(a,b){
+  if(isSnoozed(a)!==isSnoozed(b)) return isSnoozed(a)?1:-1;
+  if(isFocusToday(a)!==isFocusToday(b)) return isFocusToday(a)?-1:1;
   if(mode==="depressive") return (eR(a)-eR(b))||(estVal(a)-estVal(b))||byPriorityThenDue(a,b);
   if(mode==="manic") return (prRank[a.priority]-prRank[b.priority])||(eR(b)-eR(a))||byPriorityThenDue(a,b);
   return byPriorityThenDue(a,b); }
@@ -604,6 +662,7 @@ function activeSort(a,b){
 /* ---- render ---- */
 function render(){
   refreshCats(); syncNote();
+  { const fc=focusCount(); const tc=$("#todayChip"); if(tc) tc.textContent="⭐ Today"+(fc?" ("+fc+")":""); }
   $("#doneChip").textContent="✓ "+doneToday()+" today";
   const list=visible();
   const lanes=[
@@ -634,9 +693,12 @@ function render(){
 }
 function card(t){
   const el=document.createElement("div");
-  el.className="task pr-"+t.priority+(t.status==="done"?" is-done":"")+(t.anxiety?" anx":"");
+  el.className="task pr-"+t.priority+(t.status==="done"?" is-done":"")+(t.anxiety?" anx":"")+(isFocusToday(t)?" focus":"");
   const overdue=t.due && new Date(t.due)<new Date() && t.status!=="done";
   const tags=[];
+  if(isFocusToday(t)) tags.push('<span class="tag" style="background:var(--accent);color:#fff">⭐ today</span>');
+  if(staleDays(t)>=7) tags.push('<span class="tag tag-stale">🕸 '+staleDays(t)+'d untouched</span>');
+  if(isSnoozed(t)) tags.push('<span class="tag tag-snz">💤 snoozed</span>');
   { const ls=taskLocs(t); if(ls.length) tags.push('<span class="tag tag-loc">'+ls.map(locLabel).join(" · ")+'</span>'); }
   if(t.helpFor) tags.push('<span class="tag tag-help">🤝 for '+esc(t.helpFor)+'</span>');
   if(t.category) tags.push('<span class="tag tag-cat">'+esc(t.category)+'</span>');
@@ -663,7 +725,9 @@ function card(t){
     (prog?'<div class="t-prog">↳ '+prog+'</div>':"")+
     (tags.length?'<div class="t-meta">'+tags.join("")+'</div>':"")+'</div>'+
     '<div class="t-actions">'+
+    (act?'<button class="icon-btn '+(isFocusToday(t)?"star-on":"")+'" data-act="star" title="Today\'s 3">'+(isFocusToday(t)?"★":"☆")+'</button>':"")+
     (act?'<button class="icon-btn" data-act="start" title="Start now (focus)">&#9654;</button>':"")+
+    (act?'<button class="icon-btn" data-act="nap" title="Not now — snooze 3 days">&#128164;</button>':"")+
     (act?'<button class="icon-btn" data-act="wait" title="Done my part — park &amp; set a chase reminder">&#8987;</button>':"")+
     (t.status==="waiting"?'<button class="icon-btn" data-act="chase" title="Copy a follow-up message">&#128203;</button>':"")+
     (t.status==="waiting"?'<button class="icon-btn" data-act="snooze" title="Push chase 3 days">&#128564;</button>':"")+
@@ -671,7 +735,9 @@ function card(t){
   const q=s=>el.querySelector(s);
   q('[data-act="check"]').onclick=()=>{ if(t.status==="done"){ t.status="todo"; t.completedAt=null; touch(t); save(); render(); } else openComplete(t.id); };
   q('[data-act="check"]').onkeydown=e=>{ if(e.key===" "||e.key==="Enter"){ e.preventDefault(); q('[data-act="check"]').onclick(); } };
+  if(q('[data-act="star"]')) q('[data-act="star"]').onclick=()=>toggleFocus(t);
   if(q('[data-act="start"]')) q('[data-act="start"]').onclick=()=>openFocusOn(t.id);
+  if(q('[data-act="nap"]')) q('[data-act="nap"]').onclick=()=>snoozeTask(t);
   if(q('[data-act="wait"]')) q('[data-act="wait"]').onclick=()=>moveToWaiting(t);
   if(q('[data-act="chase"]')) q('[data-act="chase"]').onclick=()=>openChase(t);
   if(q('[data-act="snooze"]')) q('[data-act="snooze"]').onclick=()=>snoozeChase(t);
@@ -718,7 +784,7 @@ function scoreTask(t, ctx){ let s=0;
 function renderSuggest(){
   const box=$("#suggest"); box.className="suggest";
   if(searchActive()){ box.classList.remove("show"); box.innerHTML=""; return; }
-  const act=visible().filter(t=>t.status==="todo"||t.status==="doing");
+  const act=visible().filter(t=>(t.status==="todo"||t.status==="doing")&&!isSnoozed(t));
   if(!act.length){ box.classList.remove("show"); box.innerHTML=""; return; }
   let picks,head,sub;
   if(mode==="depressive"){
@@ -781,7 +847,10 @@ function dueDowText(v){ if(!v) return "";
   const weekend=(d.getDay()===0||d.getDay()===6);
   return {text:wd+(weekend?" — weekend":""), weekend:weekend}; }
 function refreshDueDow(){ const r=dueDowText($("#mDue").value); const el=$("#mDueDow");
-  if(!r){ el.textContent=""; return; } el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--muted)"; }
+  if(!r){ el.textContent=""; } else { el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--muted)"; }
+  const g=$("#mGcal"), due=$("#mDue").value;
+  if(due){ g.href=gcalUrl({title:$("#mName").value,due:due,notes:$("#mNotes").value,estimate:$("#mEst").value}); g.style.display="inline-block"; }
+  else g.style.display="none"; }
 function refreshNthWrap(){ $("#nthWrap").style.display=$("#mRecur").value==="monthly_nth"?"grid":"none"; }
 let editId=null;
 function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return;
@@ -870,6 +939,7 @@ $("#cSave").onclick=()=>{ const t=tasks.find(x=>x.id===completeId); if(!t)return
   else { t.status=next; t.completedAt=null; }
   t.reminded=false; touch(t); save(); $("#complete").classList.remove("show"); render();
   if($("#focus").classList.contains("show")) showFocus();
+  if(next==="done") confetti();
   toast(next==="done"?"Logged & closed":"Logged — moved to "+next); };
 
 /* ---- chase modal ---- */
@@ -946,6 +1016,31 @@ $("#exportBtn").onclick=()=>{
 
 /* ---- controls ---- */
 $("#addBtn").onclick=addQuick;
+$("#pickBtn").onclick=pickOne;
+function openRecap(){ const cut=now()-7*86400000;
+  const done=live().filter(t=>t.completedAt&&t.completedAt>=cut).sort((a,b)=>b.completedAt-a.completedAt);
+  $("#recapCount").textContent=done.length?("· "+done.length+" finished"):"";
+  const body=$("#recapBody");
+  if(!done.length){ body.innerHTML='<div class="recap-empty">Nothing closed in the last 7 days yet. The next one you finish shows up here — that counts.</div>'; }
+  else { const byDay={};
+    done.forEach(t=>{ const d=new Date(t.completedAt); const k=d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}); (byDay[k]=byDay[k]||[]).push(t); });
+    body.innerHTML=Object.keys(byDay).map(k=>'<div class="recap-day"><h4>'+esc(k)+'</h4>'+
+      byDay[k].map(t=>'<div class="recap-item">✓ '+esc(t.title)+(t.category?' <span style="color:var(--muted)">· '+esc(t.category)+'</span>':'')+'</div>').join("")+'</div>').join(""); }
+  $("#recap").classList.add("show"); }
+$("#recapBtn").onclick=openRecap;
+$("#recapClose").onclick=()=>$("#recap").classList.remove("show");
+$("#recap").onclick=e=>{ if(e.target.id==="recap") $("#recap").classList.remove("show"); };
+(function(){ const SR=window.SpeechRecognition||window.webkitSpeechRecognition; const mic=$("#micBtn"); if(!mic)return;
+  if(!SR){ mic.style.display="none"; return; }
+  let rec=null, on=false;
+  mic.onclick=()=>{ if(on){ try{rec.stop();}catch(e){} return; }
+    rec=new SR(); rec.lang="en-US"; rec.interimResults=false; rec.maxAlternatives=1;
+    rec.onstart=()=>{ on=true; mic.classList.add("rec"); $("#quickAdd").placeholder="Listening… say the task"; };
+    rec.onend=()=>{ on=false; mic.classList.remove("rec"); $("#quickAdd").placeholder="Brain dump — type a task and press Enter…"; };
+    rec.onerror=()=>{ toast("Didn't catch that — try again or type it."); };
+    rec.onresult=e=>{ const txt=(e.results[0][0].transcript||"").trim(); if(txt){ $("#quickAdd").value=txt; addQuick(); } };
+    try{ rec.start(); }catch(e){ toast("Voice input isn't available here."); } };
+})();
 $("#quickAdd").addEventListener("keydown",e=>{ if(e.key==="Enter")addQuick(); });
 $("#catFilter").onchange=render; $("#prFilter").onchange=render; $("#hideDone").onchange=render; $("#anxFilter").onchange=render; $("#promisedFilter").onchange=render;
 $("#storeNote").onclick=()=>{ if(fbEnabled()){ syncState="saving"; syncNote(); syncPull(); fbPushDebounced(); } };
@@ -954,7 +1049,7 @@ $("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.d
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
 document.querySelectorAll("#modebar button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 document.querySelectorAll("#locToggle button").forEach(b=>b.onclick=()=>setLoc(b.dataset.l));
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); } });
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkReminders(); syncPull(); } });
 (function(){ let ticking=false; const btn=$("#toTop");
   btn.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
