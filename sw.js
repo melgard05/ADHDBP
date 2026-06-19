@@ -4,8 +4,10 @@
    - Focuses the app when a notification is clicked.
    - Receives Web Push (for the future push backend). */
 
-const CACHE = "taskdesk-v3";   // bumped for the index.html move
+const CACHE = "taskdesk-v4";   // bumped for Phase 2 push
 const ASSETS = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png"];
+const FB_URL = "https://adhd-bipolar-organization-default-rtdb.firebaseio.com";
+const FB_PATH = "td_k9m4x7qz2p";
 
 self.addEventListener("install", e => {
   e.waitUntil(
@@ -49,12 +51,32 @@ self.addEventListener("notificationclick", e => {
 });
 
 self.addEventListener("push", e => {
-  let data = { title: "TaskDesk reminder", body: "" };
-  try { data = e.data.json(); } catch (_) { if (e.data) data.body = e.data.text(); }
-  e.waitUntil(
-    self.registration.showNotification(data.title || "TaskDesk reminder", {
-      body: data.body || "", tag: data.tag || "taskdesk",
-      icon: "icon-192.png", badge: "icon-192.png"
-    })
-  );
+  e.waitUntil((async () => {
+    // If the push carried explicit data, show it directly.
+    let data = null;
+    try { data = e.data ? e.data.json() : null; } catch (_) {}
+    if (data && data.title) {
+      return self.registration.showNotification(data.title, {
+        body: data.body || "", tag: data.tag || "taskdesk",
+        icon: "icon-192.png", badge: "icon-192.png"
+      });
+    }
+    // Otherwise it's a silent ping from the Worker — look up what's due right now.
+    try {
+      const r = await fetch(FB_URL + "/" + FB_PATH + ".json", { cache: "no-store" });
+      if (!r.ok) return;
+      const d = await r.json();
+      const tasks = Array.isArray(d) ? d : (d ? Object.values(d) : []);
+      const now = Date.now();
+      const due = tasks.filter(t => t && !t.deleted && t.status !== "done" && t.dueMs && t.dueMs <= now);
+      if (!due.length) {
+        return self.registration.showNotification("ADHDBP Control Panel", { body: "Checked your reminders — nothing due right now.", tag: "td-check", icon: "icon-192.png", badge: "icon-192.png" });
+      }
+      for (const t of due.slice(0, 6)) {
+        await self.registration.showNotification(t.status === "waiting" ? "Time to follow up" : "Reminder", {
+          body: t.title, tag: t.id, icon: "icon-192.png", badge: "icon-192.png"
+        });
+      }
+    } catch (_) {}
+  })());
 });

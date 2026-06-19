@@ -229,7 +229,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 25</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 27</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -488,7 +488,12 @@
       <div class="set-sec">
         <div class="set-h">Reminders</div>
         <div class="set-row"><span id="setNotif">…</span><button class="btn-ghost" id="notifyBtn" title="Turn on reminders">&#128276; Turn on</button></div>
-        <div class="set-note">Pop-up reminders work while this app is open. (Notifications when it's fully closed are coming later.)</div>
+        <div class="set-note">Pop-up reminders work while this app is open.</div>
+      </div>
+      <div class="set-sec">
+        <div class="set-h">Background reminders (Phase 2)</div>
+        <div class="set-row"><span id="setPush">…</span><button class="btn-ghost" id="pushBtn">&#128640; Enable</button></div>
+        <div class="set-note">Get pinged even when the app is fully closed. Needs the one-time Cloudflare Worker setup.</div>
       </div>
       <div class="set-sec">
         <div class="set-h">Follow-up messages</div>
@@ -539,6 +544,11 @@ const FB = {
   proxyURL:"",            // e.g. https://taskdesk.<you>.workers.dev
   proxyToken:""           // must match the Worker's APP_TOKEN
 };
+/* Phase 2 — background reminders. After you deploy the Worker, paste its URL into workerURL. */
+const PUSH = {
+  workerURL:"",   // <-- paste your Worker URL here, e.g. https://adhdbp-push.<you>.workers.dev
+  vapidPublic:"BJwEA0ejHEo0itwa6cB__ayHPpjq9v_FqN8ECcmhyMz2p-n-du5nRyLpJzuGE7lnmguksbSAlsWANqSqa5iM4DU"
+};
 
 /* ---- storage ---- */
 const KEY="taskdesk_v1", MKEY="taskdesk_mode", TKEY="taskdesk_templates", LKEY="taskdesk_loc";
@@ -547,7 +557,8 @@ function load(){ try{ const r=localStorage.getItem(KEY); return r?JSON.parse(r):
   catch(e){ persistent=false; return memCache||[]; } }
 function saveLocal(){ try{ localStorage.setItem(KEY,JSON.stringify(tasks)); }
   catch(e){ persistent=false; memCache=tasks; } }
-function save(){ saveLocal(); fbPushDebounced(); }
+function normalizeDueMs(){ tasks.forEach(t=>{ const d=t.due?new Date(t.due):null; t.dueMs=(d&&!isNaN(d))?d.getTime():0; }); }
+function save(){ normalizeDueMs(); saveLocal(); fbPushDebounced(); }
 let tasks=load();
 let mode="baseline"; try{ mode=localStorage.getItem(MKEY)||"baseline"; }catch(e){}
 let locView="all"; try{ locView=localStorage.getItem(LKEY)||"all"; }catch(e){}
@@ -933,8 +944,11 @@ function renderAlerts(){ const soon=new Date(now()+3600000), nowD=new Date();
   if(!due.length){ box.classList.remove("show"); box.innerHTML=""; return; }
   const overdue=due.filter(t=>new Date(t.due)<nowD);
   box.classList.add("show");
+  const needPerm=("Notification" in window) && Notification.permission!=="granted";
   box.innerHTML='<div class="alert-card"><strong>&#9200; '+(overdue.length?overdue.length+" due now":due.length+" coming up")+'</strong>'+
-    '<span style="color:var(--muted);font-size:13px">'+due.slice(0,3).map(t=>esc(t.title)).join(" · ")+(due.length>3?" …":"")+'</span></div>'; }
+    '<span style="color:var(--muted);font-size:13px">'+due.slice(0,3).map(t=>esc(t.title)).join(" · ")+(due.length>3?" …":"")+'</span>'+
+    (needPerm?'<button id="alertEnable" class="btn-ghost" style="margin-top:6px;font-size:12px;color:var(--accent)">🔔 Turn on notifications to get pinged</button>':"")+'</div>';
+  if(needPerm){ const b=$("#alertEnable"); if(b) b.onclick=enableReminders; } }
 
 /* ---- recommendations / suggestions ---- */
 function timeContext(){ const d=new Date(); const day=d.getDay(); const h=d.getHours();
@@ -1005,20 +1019,47 @@ function setLoc(l){ locView=l; try{localStorage.setItem(LKEY,l);}catch(e){}
   document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l===l)); render(); }
 
 /* ---- reminders ---- */
+function notify(title, body, tag){
+  try{
+    if(navigator.serviceWorker && navigator.serviceWorker.ready){
+      navigator.serviceWorker.ready.then(reg=>{ try{ reg.showNotification(title,{body:body,tag:tag,icon:"icon-192.png",badge:"icon-192.png",renotify:true}); }catch(e){ try{ new Notification(title,{body:body,tag:tag,icon:"icon-192.png"}); }catch(e2){} } })
+        .catch(()=>{ try{ new Notification(title,{body:body,tag:tag,icon:"icon-192.png"}); }catch(e){} });
+    } else { new Notification(title,{body:body,tag:tag,icon:"icon-192.png"}); }
+  }catch(e){}
+}
 function checkReminders(){
   if(!("Notification" in window)||Notification.permission!=="granted"){ renderAlerts(); return; }
   live().forEach(t=>{ if(t.status==="done"||t.reminded||!t.due)return;
     if(new Date(t.due).getTime()<=now()){
-      try{ new Notification(t.status==="waiting"?"TaskDesk — time to follow up":"TaskDesk reminder",{body:t.title,tag:t.id,icon:"icon-192.png"}); }catch(e){}
+      notify(t.status==="waiting"?"Time to follow up":"Reminder", t.title, t.id);
       t.reminded=true; touch(t); save(); } });
   renderAlerts(); }
 setInterval(checkReminders,30000);
-$("#notifyBtn").onclick=async()=>{
-  if(!("Notification" in window)){ alert("This browser can't show notifications. The on-screen banner still flags due/overdue tasks while TaskDesk is open."); return; }
+async function enableReminders(){
+  if(!("Notification" in window)){ alert("This browser can't show notifications. The on-screen banner still flags due/overdue tasks while the app is open."); return; }
   const p=await Notification.requestPermission();
-  if(p==="granted"){ $("#notifyBtn").textContent="🔔 Reminders on"; checkReminders(); }
-  else alert("Reminders blocked. The on-screen banner still flags due and overdue tasks while the app is open.");
-  if(typeof updateSettings==="function") updateSettings(); };
+  if(p==="granted"){ const b=$("#notifyBtn"); if(b)b.textContent="🔔 Reminders on"; checkReminders(); }
+  else alert("Reminders are blocked. To turn them on: tap the lock/page icon at the left of the address bar → Notifications → Allow. The on-screen banner still flags due tasks while the app is open.");
+  if(typeof updateSettings==="function") updateSettings();
+  render();
+}
+$("#notifyBtn").onclick=enableReminders;
+function urlB64ToUint8(b){ const pad="=".repeat((4-b.length%4)%4); const s=(b+pad).replace(/-/g,"+").replace(/_/g,"/"); const raw=atob(s); const u=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++)u[i]=raw.charCodeAt(i); return u; }
+async function enablePush(){
+  if(!PUSH.workerURL){ alert("Background reminders need your Worker URL added to the app first (see the setup steps)."); return; }
+  if(!("serviceWorker" in navigator) || !("PushManager" in window)){ alert("This browser doesn't support background notifications."); return; }
+  const perm=await Notification.requestPermission();
+  if(perm!=="granted"){ alert("Allow notifications first, then try again."); updateSettings(); return; }
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){ sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToUint8(PUSH.vapidPublic)}); }
+    const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/subscribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(sub)});
+    if(r.ok){ try{localStorage.setItem("td_push","1");}catch(e){} toast("Background reminders enabled"); }
+    else toast("Couldn't reach the Worker — double-check the URL.");
+  }catch(e){ toast("Couldn't enable — "+(e&&e.message?e.message:"unknown error")); }
+  updateSettings();
+}
 
 /* ---- edit modal ---- */
 function dueDowText(v){ if(!v) return "";
@@ -1245,7 +1286,7 @@ $("#focusBtn").onclick=openFocus; $("#fClose").onclick=closeFocus;
 $("#fSkip").onclick=()=>{ focusIdx++; stopTimer(); resetTimer(); showFocus(); };
 $("#fDone").onclick=()=>{ openComplete($("#focus").dataset.tid); };
 $("#fNote").onclick=()=>{ openQNote($("#focus").dataset.tid); };
-function tick(){ timerLeft--; updTimer(); if(timerLeft<=0){ stopTimer(); try{ if(Notification.permission==="granted")new Notification("Focus block done",{body:"Nice. Take a short break."}); }catch(e){} } }
+function tick(){ timerLeft--; updTimer(); if(timerLeft<=0){ stopTimer(); if("Notification" in window && Notification.permission==="granted") notify("Focus block done","Nice. Take a short break.","focus-done"); } }
 function updTimer(){ const m=Math.floor(timerLeft/60),s=timerLeft%60; $("#timer").textContent=m+":"+pad(s); }
 function stopTimer(){ if(timerInt){clearInterval(timerInt);timerInt=null;} flushFocus(); $("#tStart").textContent=startLabel(); }
 function resetTimer(){ if(!timerInt){ timerLeft=focusSecsFor(curFocusTask()); updTimer(); } $("#tStart").textContent=startLabel(); }
@@ -1293,8 +1334,11 @@ function updateSettings(){
   $("#setNotif").textContent = np==="granted"?"Reminders are on." : np==="denied"?"Blocked in browser settings." : np==="unsupported"?"Not supported in this browser." : "Reminders are off.";
   const dc=live().filter(t=>t.status==="done").length;
   $("#setDoneCount").textContent = dc?("You have "+dc+" completed task"+(dc>1?"s":"")+" on the board."):"No completed tasks to clear.";
+  { let pushed=false; try{ pushed=localStorage.getItem("td_push")==="1"; }catch(e){}
+    $("#setPush").textContent = !PUSH.workerURL ? "Worker URL not added yet." : (pushed?"On — pings even when closed.":"Off — tap Enable."); }
 }
 $("#settingsBtn").onclick=()=>{ updateSettings(); $("#settings").classList.add("show"); };
+$("#pushBtn").onclick=enablePush;
 $("#setClose").onclick=()=>$("#settings").classList.remove("show");
 $("#settings").onclick=e=>{ if(e.target.id==="settings") $("#settings").classList.remove("show"); };
 $("#syncNowBtn").onclick=()=>{ if(fbEnabled()){ syncState="saving"; syncNote(); updateSettings(); syncPull(); fbPushDebounced(); setTimeout(updateSettings,1200); } else toast("Sync isn't set up."); };
@@ -1347,7 +1391,7 @@ if(!live().length && persistent && !fbEnabled()){
 
 /* ---- boot ---- */
 document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l===locView));
-setMode(mode); checkReminders();
+setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders();
 if("Notification" in window && Notification.permission==="granted") $("#notifyBtn").textContent="🔔 Reminders on";
 if(fbEnabled()){ syncPull(); setInterval(syncPull,15000); }
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
