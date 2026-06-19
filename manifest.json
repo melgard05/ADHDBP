@@ -1,6 +1,6 @@
 {
-  "name": "TaskDesk",
-  "short_name": "TaskDesk",
+  "name": "ADHDBP Control Panel",
+  "short_name": "ADHDBP",
   "description": "Task organizer with categories, priority, follow-up tracking, and reminders.",
   "start_url": "./",
   "scope": "./",

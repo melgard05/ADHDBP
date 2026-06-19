@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<title>TaskDesk</title>
+<title>ADHDBP Control Panel</title>
 <style>
   :root{
     --bg:#F4F5F8; --panel:#FFFFFF; --ink:#1A1F2E; --muted:#697089;
@@ -150,8 +150,15 @@
   .focus-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .timer{font-size:42px;font-weight:800;letter-spacing:-.02em;margin:8px 0;font-variant-numeric:tabular-nums}
   .timer-row{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
-  #modal,#chase,#tpl,#complete,#recap{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
-  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show{display:grid}
+  #modal,#chase,#tpl,#complete,#recap,#settings{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
+  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show{display:grid}
+  .set-sec{padding:12px 0;border-bottom:1px solid var(--line)}
+  .set-sec:last-child{border-bottom:0}
+  .set-h{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
+  .set-row{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:6px}
+  .set-row span{font-size:13.5px;color:var(--ink)}
+  .set-row button{flex:none;white-space:nowrap}
+  .set-note{font-size:12px;color:var(--muted);margin-top:4px}
   #micBtn.rec{background:var(--hi);color:#fff;animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
   .task.focus{box-shadow:inset 4px 0 0 var(--accent)}
@@ -203,14 +210,12 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">TaskDesk <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 20</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 21</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
         <button class="btn-ghost" id="recapBtn" title="What I finished this week">&#128202; Week</button>
-        <button class="btn-ghost" id="notifyBtn" title="Turn on reminders">&#128276; Reminders</button>
-        <button class="btn-ghost" id="tplBtn" title="Edit follow-up message templates">&#9881; Templates</button>
-        <button class="btn-ghost" id="exportBtn" title="Download CSV">&#11015; CSV</button>
+        <button class="btn-ghost" id="settingsBtn" title="Settings &amp; tools">&#9881; Settings</button>
       </div>
     </div>
     <div class="capture">
@@ -400,6 +405,35 @@
       <button class="btn-ghost" id="chaseEditTpl">Edit templates</button>
       <div style="display:flex;gap:8px"><button id="chaseClose">Close</button><button class="btn-primary" id="chaseCopy">Copy message</button></div>
     </div>
+  </div>
+</div>
+
+<div id="settings">
+  <div class="sheet">
+    <h3>Settings &amp; tools <small>ADHDBP Control Panel · build 21</small></h3>
+    <div class="sheet-body">
+      <div class="set-sec">
+        <div class="set-h">Sync</div>
+        <div class="set-row"><span id="setSync">…</span><button class="btn-primary" id="syncNowBtn">Sync now</button></div>
+        <div class="set-note">Your tasks sync across every device that opens this app — the list lives in the cloud, not on one phone.</div>
+      </div>
+      <div class="set-sec">
+        <div class="set-h">Reminders</div>
+        <div class="set-row"><span id="setNotif">…</span><button class="btn-ghost" id="notifyBtn" title="Turn on reminders">&#128276; Turn on</button></div>
+        <div class="set-note">Pop-up reminders work while this app is open. (Notifications when it's fully closed are coming later.)</div>
+      </div>
+      <div class="set-sec">
+        <div class="set-h">Follow-up messages</div>
+        <div class="set-row"><span>Edit the templates used when you chase someone.</span><button class="btn-ghost" id="tplBtn">&#9881; Edit</button></div>
+      </div>
+      <div class="set-sec">
+        <div class="set-h">Data</div>
+        <div class="set-row"><span>Download every task as a spreadsheet.</span><button class="btn-ghost" id="exportBtn">&#11015; Export CSV</button></div>
+        <div class="set-row"><span id="setDoneCount">Clear finished tasks off the board.</span><button class="btn-ghost" id="clearDoneBtn" style="color:var(--hi)">&#128465; Clear completed</button></div>
+        <div class="set-note">Clearing completed tasks removes them from every device. This can't be undone.</div>
+      </div>
+    </div>
+    <div class="sheet-foot"><span></span><button class="btn-primary" id="setClose">Done</button></div>
   </div>
 </div>
 
@@ -860,7 +894,8 @@ $("#notifyBtn").onclick=async()=>{
   if(!("Notification" in window)){ alert("This browser can't show notifications. The on-screen banner still flags due/overdue tasks while TaskDesk is open."); return; }
   const p=await Notification.requestPermission();
   if(p==="granted"){ $("#notifyBtn").textContent="🔔 Reminders on"; checkReminders(); }
-  else alert("Reminders blocked. The on-screen banner still flags due and overdue tasks while TaskDesk is open."); };
+  else alert("Reminders blocked. The on-screen banner still flags due and overdue tasks while the app is open.");
+  if(typeof updateSettings==="function") updateSettings(); };
 
 /* ---- edit modal ---- */
 function dueDowText(v){ if(!v) return "";
@@ -1050,6 +1085,25 @@ function openRecap(){ const cut=now()-7*86400000;
       byDay[k].map(t=>'<div class="recap-item">✓ '+esc(t.title)+(t.category?' <span style="color:var(--muted)">· '+esc(t.category)+'</span>':'')+'</div>').join("")+'</div>').join(""); }
   $("#recap").classList.add("show"); }
 $("#recapBtn").onclick=openRecap;
+function updateSettings(){
+  if(fbEnabled()){
+    if(syncState==="ok") $("#setSync").textContent="Synced"+(lastSyncOk?" · "+new Date(lastSyncOk).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"");
+    else if(syncState==="offline") $("#setSync").textContent="⚠ Not reaching sync right now";
+    else if(syncState==="saving") $("#setSync").textContent="Saving…";
+    else $("#setSync").textContent="Connecting…";
+  } else $("#setSync").textContent="Saved on this device";
+  const np=("Notification" in window)?Notification.permission:"unsupported";
+  $("#setNotif").textContent = np==="granted"?"Reminders are on." : np==="denied"?"Blocked in browser settings." : np==="unsupported"?"Not supported in this browser." : "Reminders are off.";
+  const dc=live().filter(t=>t.status==="done").length;
+  $("#setDoneCount").textContent = dc?("You have "+dc+" completed task"+(dc>1?"s":"")+" on the board."):"No completed tasks to clear.";
+}
+$("#settingsBtn").onclick=()=>{ updateSettings(); $("#settings").classList.add("show"); };
+$("#setClose").onclick=()=>$("#settings").classList.remove("show");
+$("#settings").onclick=e=>{ if(e.target.id==="settings") $("#settings").classList.remove("show"); };
+$("#syncNowBtn").onclick=()=>{ if(fbEnabled()){ syncState="saving"; syncNote(); updateSettings(); syncPull(); fbPushDebounced(); setTimeout(updateSettings,1200); } else toast("Sync isn't set up."); };
+$("#clearDoneBtn").onclick=()=>{ const done=live().filter(t=>t.status==="done"); if(!done.length){ toast("No completed tasks to clear."); return; }
+  if(confirm("Clear "+done.length+" completed task"+(done.length>1?"s":"")+"? This removes them from every device and can't be undone.")){
+    done.forEach(t=>{ t.deleted=true; touch(t); }); save(); render(); updateSettings(); toast("Cleared "+done.length+" completed"); } };
 $("#recapClose").onclick=()=>$("#recap").classList.remove("show");
 $("#recap").onclick=e=>{ if(e.target.id==="recap") $("#recap").classList.remove("show"); };
 (function(){ const SR=window.SpeechRecognition||window.webkitSpeechRecognition; const mic=$("#micBtn"); if(!mic)return;
@@ -1071,7 +1125,7 @@ $("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.d
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
 document.querySelectorAll("#modebar button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 document.querySelectorAll("#locToggle button").forEach(b=>b.onclick=()=>setLoc(b.dataset.l));
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); $("#settings").classList.remove("show"); } });
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkReminders(); syncPull(); } });
 (function(){ let ticking=false; const btn=$("#toTop");
   btn.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
