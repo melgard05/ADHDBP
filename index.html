@@ -159,6 +159,12 @@
   .set-row span{font-size:13.5px;color:var(--ink)}
   .set-row button{flex:none;white-space:nowrap}
   .set-note{font-size:12px;color:var(--muted);margin-top:4px}
+  .est-pick{display:flex;gap:8px;align-items:center}
+  .est-pick select{flex:1;max-width:120px}
+  .est-u{font-size:13px;color:var(--muted)}
+  .est-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .est-chips button{font-size:12.5px;padding:5px 10px}
+  #estHint button{margin-left:4px}
   #micBtn.rec{background:var(--hi);color:#fff;animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
   .task.focus{box-shadow:inset 4px 0 0 var(--accent)}
@@ -210,7 +216,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 21</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 22</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -329,7 +335,14 @@
       <div class="grid2">
         <div class="field"><label>Energy needed</label>
           <select id="mEnergy"><option value="">—</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
-        <div class="field"><label>Time estimate (min)</label><input id="mEst" type="number" min="0" step="5" placeholder="e.g. 30"></div>
+        <div class="field"><label>Time estimate</label>
+          <div class="est-pick"><select id="mEstH"></select><span class="est-u">hr</span><select id="mEstM"></select><span class="est-u">min</span></div>
+          <div class="est-chips" id="estChips">
+            <button type="button" data-m="5">5m</button><button type="button" data-m="15">15m</button><button type="button" data-m="30">30m</button><button type="button" data-m="45">45m</button><button type="button" data-m="60">1h</button><button type="button" data-m="120">2h</button><button type="button" data-m="240">½ day</button>
+          </div>
+          <div id="estSpent" style="font-size:12px;color:var(--muted);margin-top:5px;display:none"></div>
+          <div id="estHint" style="font-size:12px;margin-top:5px;display:none;background:#F3F0FF;border-radius:8px;padding:7px 9px;line-height:1.45"></div>
+        </div>
       </div>
       <div class="field"><label>Start anxiety</label>
         <label class="check-row"><input type="checkbox" id="mAnx"> Needs a nudge to start</label></div>
@@ -576,6 +589,22 @@ function confetti(){ try{
     if(f<110) requestAnimationFrame(go); else c.remove(); })();
 }catch(e){} }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
+function fmtMin(m){ m=parseInt(m)||0; if(!m) return ""; const h=Math.floor(m/60), mm=m%60; return (h?h+"h":"")+(mm?(h?" ":"")+mm+"m":(h?"":"0m")); }
+function estMultiplier(){ const rs=live().filter(t=>t.status==="done"&&(parseInt(t.estimate)||0)>0&&(t.timeSpentSec||0)>0).map(t=>(t.timeSpentSec/60)/parseInt(t.estimate));
+  if(rs.length<3) return null; rs.sort((a,b)=>a-b); const mid=rs[Math.floor(rs.length/2)]; return Math.max(0.5,Math.min(4,mid)); }
+function curEstMin(){ return (parseInt($("#mEstH").value)||0)*60+(parseInt($("#mEstM").value)||0); }
+function setEstSelects(total){ total=parseInt(total)||0; const h=Math.floor(total/60); let mm=Math.round((total%60)/5)*5; if(mm===60){ mm=0; }
+  $("#mEstH").value=Math.min(h,12); $("#mEstM").value=mm; }
+function refreshEstHint(){ const hintEl=$("#estHint"); const est=curEstMin(); const mult=estMultiplier();
+  if(!est){ hintEl.style.display="none"; hintEl.innerHTML=""; return; }
+  if(mult && mult>1.15){ const padded=Math.max(5,Math.round(est*mult/5)*5);
+    hintEl.style.display="block";
+    hintEl.innerHTML="💡 Your tasks usually take about <b>"+mult.toFixed(1)+"×</b> your first guess. Realistic for this one: <b>"+fmtMin(padded)+"</b>. <button type=\"button\" id=\"estPad\" class=\"btn-ghost\" style=\"padding:2px 8px;font-size:12px\">Use "+fmtMin(padded)+"</button>";
+    const b=$("#estPad"); if(b) b.onclick=()=>{ setEstSelects(padded); refreshEstHint(); };
+  } else if(!mult){
+    hintEl.style.display="block";
+    hintEl.innerHTML="💡 Whatever you guess, it usually runs longer — padding by half is a safe bet. Once you've used the focus timer on a few tasks, this will learn your real pace and pad for you.";
+  } else { hintEl.style.display="none"; hintEl.innerHTML=""; } }
 async function copyText(s){ try{ await navigator.clipboard.writeText(s); }
   catch(e){ const ta=document.createElement("textarea"); ta.value=s; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(_){} ta.remove(); } }
 
@@ -625,7 +654,7 @@ function parseQuick(raw){
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",recurOrd:1,recurDow:1,whenHint:"",waitOn:"",waitSince:"",
-  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
   const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,locs:p.loc?[p.loc]:[],helpFor:p.helpFor,due:p.due});
@@ -762,7 +791,7 @@ function card(t){
     tags.push('<span class="tag tag-due '+(overdue?"overdue":"")+'">&#9200; '+lbl+fmtDue(t.due)+od+'</span>'); }
   if(t.anxiety) tags.push('<span class="tag tag-anx">needs a nudge</span>');
   if(t.horizon) tags.push('<span class="tag tag-horizon">'+t.horizon+'</span>');
-  if(t.estimate) tags.push('<span class="tag tag-est">~'+t.estimate+'m</span>');
+  if(t.estimate) tags.push('<span class="tag tag-est">~'+fmtMin(t.estimate)+'</span>');
   if(t.energy) tags.push('<span class="tag tag-energy">'+t.energy+' energy</span>');
   if(t.recur) tags.push('<span class="tag tag-recur">&#8635; '+recurLabel(t)+'</span>');
   if(t.whenHint) tags.push('<span class="tag tag-when">'+({wkday_morning:"wkday AM",after_work:"after work",weekend:"weekend",anytime:"anytime"}[t.whenHint]||t.whenHint)+'</span>');
@@ -906,14 +935,15 @@ function dueDowText(v){ if(!v) return "";
 function refreshDueDow(){ const r=dueDowText($("#mDue").value); const el=$("#mDueDow");
   if(!r){ el.textContent=""; } else { el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--muted)"; }
   const g=$("#mGcal"), due=$("#mDue").value;
-  if(due){ g.href=gcalUrl({title:$("#mName").value,due:due,notes:$("#mNotes").value,estimate:$("#mEst").value}); g.style.display="inline-block"; }
+  if(due){ g.href=gcalUrl({title:$("#mName").value,due:due,notes:$("#mNotes").value,estimate:curEstMin()}); g.style.display="inline-block"; }
   else g.style.display="none"; }
 function refreshNthWrap(){ $("#nthWrap").style.display=$("#mRecur").value==="monthly_nth"?"grid":"none"; }
 let editId=null;
 function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return;
   $("#mName").value=t.title; $("#mNotes").value=t.notes||"";
   $("#mCat").value=t.category||""; $("#mDue").value=t.due||"";
-  $("#mEst").value=t.estimate||""; $("#mEnergy").value=t.energy||"";
+  setEstSelects(t.estimate||0);
+  $("#mEnergy").value=t.energy||"";
   $("#mHorizon").value=t.horizon||""; $("#mRecur").value=t.recur||"";
   $("#mRecurOrd").value=(t.recurOrd==null?1:t.recurOrd); $("#mRecurDow").value=(t.recurDow==null?1:t.recurDow);
   $("#mWhen").value=t.whenHint||"";
@@ -926,6 +956,10 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   setSeg("#mPr",t.priority); setSeg("#mStatus",t.status);
   $("#waitWrap").style.display=t.status==="waiting"?"grid":"none";
   refreshDueDow(); refreshNthWrap();
+  { const sp=$("#estSpent"); const sec=t.timeSpentSec||0;
+    if(sec>=60){ sp.style.display="block"; sp.innerHTML="⏱ Focus time logged so far: <b>"+fmtMin(Math.round(sec/60))+"</b>"+((parseInt(t.estimate)||0)?(" of ~"+fmtMin(t.estimate)+" estimated"):""); }
+    else { sp.style.display="none"; sp.innerHTML=""; } }
+  refreshEstHint();
   const lg=t.log||[];
   if(lg.length){ $("#mLogWrap").style.display="grid";
     $("#mLog").innerHTML=lg.slice().reverse().map(e=>{
@@ -947,7 +981,7 @@ document.querySelectorAll("#mStatus button").forEach(b=>b.onclick=()=>{ setSeg("
 $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.title=$("#mName").value.trim()||t.title; t.notes=$("#mNotes").value.trim();
   t.category=$("#mCat").value.trim(); t.due=$("#mDue").value;
-  t.estimate=$("#mEst").value; t.energy=$("#mEnergy").value;
+  { const tot=curEstMin(); t.estimate=tot?String(tot):""; } t.energy=$("#mEnergy").value;
   t.horizon=$("#mHorizon").value; t.recur=$("#mRecur").value;
   t.recurOrd=parseInt($("#mRecurOrd").value); t.recurDow=parseInt($("#mRecurDow").value);
   t.whenHint=$("#mWhen").value;
@@ -1028,7 +1062,10 @@ $("#tplCloseBtn").onclick=()=>{ saveTpl(); $("#tpl").classList.remove("show"); }
 $("#tplBtn").onclick=openTpl;
 
 /* ---- focus mode ---- */
-let focusIdx=0,timerInt=null;
+let focusIdx=0,timerInt=null,focusStartTs=0,focusTid="";
+function flushFocus(){ if(focusStartTs && focusTid){ const t=tasks.find(x=>x.id===focusTid);
+    if(t){ t.timeSpentSec=(t.timeSpentSec||0)+Math.round((Date.now()-focusStartTs)/1000); touch(t); save(); } }
+  focusStartTs=0; }
 function focusList(){ return visible().filter(t=>t.status==="todo"||t.status==="doing").sort(activeSort); }
 function curFocusTask(){ return focusList()[focusIdx]; }
 function focusSecsFor(t){ return (mode==="depressive"||(t&&t.anxiety))?300:1500; }
@@ -1045,7 +1082,8 @@ function showFocus(){ const l=focusList(); if(!l.length){ closeFocus(); render()
   let fn=t.notes||"";
   if(lastF&&lastF.resume) fn=(fn?fn+"\n\n":"")+"▶ Pick up: "+lastF.resume;
   $("#fTitle").textContent=t.title; $("#fNotes").textContent=fn;
-  const m=[]; taskLocs(t).forEach(l=>m.push(l)); if(t.category)m.push(t.category); if(t.estimate)m.push("~"+t.estimate+"m");
+  const m=[]; taskLocs(t).forEach(l=>m.push(l)); if(t.category)m.push(t.category); if(t.estimate)m.push("est "+fmtMin(t.estimate));
+  if((t.timeSpentSec||0)>=60) m.push("spent "+fmtMin(Math.round(t.timeSpentSec/60)));
   if(t.priority)m.push(t.priority+" priority"); if(t.energy)m.push(t.energy+" energy");
   $("#fMeta").innerHTML=m.map(x=>'<span class="tag tag-cat">'+esc(x)+'</span>').join("");
   if(!timerInt){ timerLeft=focusSecsFor(t); updTimer(); } $("#tStart").textContent=startLabel();
@@ -1056,9 +1094,9 @@ $("#fSkip").onclick=()=>{ focusIdx++; stopTimer(); resetTimer(); showFocus(); };
 $("#fDone").onclick=()=>{ openComplete($("#focus").dataset.tid); };
 function tick(){ timerLeft--; updTimer(); if(timerLeft<=0){ stopTimer(); try{ if(Notification.permission==="granted")new Notification("Focus block done",{body:"Nice. Take a short break."}); }catch(e){} } }
 function updTimer(){ const m=Math.floor(timerLeft/60),s=timerLeft%60; $("#timer").textContent=m+":"+pad(s); }
-function stopTimer(){ if(timerInt){clearInterval(timerInt);timerInt=null;} $("#tStart").textContent=startLabel(); }
+function stopTimer(){ if(timerInt){clearInterval(timerInt);timerInt=null;} flushFocus(); $("#tStart").textContent=startLabel(); }
 function resetTimer(){ if(!timerInt){ timerLeft=focusSecsFor(curFocusTask()); updTimer(); } $("#tStart").textContent=startLabel(); }
-$("#tStart").onclick=()=>{ if(timerInt){stopTimer();} else { timerInt=setInterval(tick,1000); $("#tStart").textContent="Pause"; } };
+$("#tStart").onclick=()=>{ if(timerInt){stopTimer();} else { focusStartTs=Date.now(); focusTid=$("#focus").dataset.tid||""; timerInt=setInterval(tick,1000); $("#tStart").textContent="Pause"; } };
 $("#tReset").onclick=()=>{ stopTimer(); resetTimer(); };
 
 /* ---- CSV export ---- */
@@ -1073,6 +1111,12 @@ $("#exportBtn").onclick=()=>{
 
 /* ---- controls ---- */
 $("#addBtn").onclick=addQuick;
+(function(){ const h=$("#mEstH"), mm=$("#mEstM"); if(h&&mm){
+  let oh=""; for(let i=0;i<=12;i++) oh+='<option value="'+i+'">'+i+'</option>'; h.innerHTML=oh;
+  let om=""; for(let i=0;i<60;i+=5) om+='<option value="'+i+'">'+pad(i)+'</option>'; mm.innerHTML=om;
+  h.addEventListener("change",refreshEstHint); mm.addEventListener("change",refreshEstHint);
+  document.querySelectorAll("#estChips button").forEach(b=>b.onclick=()=>{ setEstSelects(parseInt(b.dataset.m)); refreshEstHint(); });
+} })();
 $("#pickBtn").onclick=pickOne;
 function openRecap(){ const cut=now()-7*86400000;
   const done=live().filter(t=>t.completedAt&&t.completedAt>=cut).sort((a,b)=>b.completedAt-a.completedAt);
