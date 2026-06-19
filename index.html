@@ -165,6 +165,11 @@
   .est-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .est-chips button{font-size:12.5px;padding:5px 10px}
   #estHint button{margin-left:4px}
+  .tag-dl{font-weight:700}
+  .dl-over{background:#FEE2E2;color:#B91C1C}
+  .dl-soon{background:#FFEDD5;color:#C2410C}
+  .dl-near{background:#FEF9C3;color:#A16207}
+  .dl-far{background:#ECFDF5;color:#047857}
   #micBtn.rec{background:var(--hi);color:#fff;animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
   .task.focus{box-shadow:inset 4px 0 0 var(--accent)}
@@ -216,7 +221,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 22</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 23</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -262,6 +267,13 @@
         <option value="">Any priority</option>
         <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
       </select>
+      <select id="sortBy" title="Sort tasks">
+        <option value="smart">Sort: Smart</option>
+        <option value="deadline">Sort: Deadline</option>
+        <option value="due">Sort: Reminder</option>
+        <option value="priority">Sort: Priority</option>
+        <option value="created">Sort: Newest</option>
+      </select>
       <div class="spacer"></div>
       <label style="font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center">
         <input type="checkbox" id="promisedFilter"> Promised</label>
@@ -305,6 +317,7 @@
         <div class="field"><label>Category</label><input id="mCat" list="catList" placeholder="e.g. Steve's, Cards, Home"><datalist id="catList"></datalist></div>
         <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div><a id="mGcal" class="gcal-link" href="#" target="_blank" rel="noopener" style="display:none">📅 Add to Google Calendar</a></div>
       </div>
+      <div class="field"><label>Deadline — must finish by</label><input id="mDeadline" type="date"><div id="mDeadlineDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div></div>
       <div class="field"><label>Priority</label>
         <div class="seg" id="mPr"><button data-v="high">High</button><button data-v="medium">Medium</button><button data-v="low">Low</button></div>
       </div>
@@ -541,6 +554,18 @@ function fmtDue(iso){ if(!iso)return"";
   const d=new Date(iso),n=new Date(); const same=d.toDateString()===n.toDateString();
   return d.toLocaleString(undefined, same?{hour:"numeric",minute:"2-digit"}:{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); }
 function daysSince(iso){ if(!iso)return null; return Math.floor((now()-new Date(iso).getTime())/86400000); }
+function daysUntil(dateStr){ if(!dateStr) return null; const d=new Date(dateStr+"T00:00:00"); if(isNaN(d)) return null;
+  const t=new Date(); t.setHours(0,0,0,0); return Math.round((d.getTime()-t.getTime())/86400000); }
+function deadlineTag(t){ const n=daysUntil(t.deadline); if(n===null) return null;
+  const d=new Date(t.deadline+"T00:00:00"); const nice=d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  let txt, cls;
+  if(n<0){ txt="⛳ "+(-n)+"d overdue"; cls="dl-over"; }
+  else if(n===0){ txt="⛳ DUE TODAY"; cls="dl-over"; }
+  else if(n===1){ txt="⛳ due tomorrow"; cls="dl-soon"; }
+  else if(n<=3){ txt="⛳ "+n+" days left"; cls="dl-soon"; }
+  else if(n<=7){ txt="⛳ due "+nice+" ("+n+"d)"; cls="dl-near"; }
+  else { txt="⛳ due "+nice; cls="dl-far"; }
+  return '<span class="tag tag-dl '+cls+'">'+txt+'</span>'; }
 function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 const eRank=t=>({low:0,medium:1,high:2}[t.energy]);
 const eR=t=>(eRank(t)==null?1:eRank(t));
@@ -654,7 +679,7 @@ function parseQuick(raw){
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",recurOrd:1,recurDow:1,whenHint:"",waitOn:"",waitSince:"",
-  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,deadline:"",log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
   const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,locs:p.loc?[p.loc]:[],helpFor:p.helpFor,due:p.due});
@@ -723,9 +748,17 @@ function byPriorityThenDue(a,b){
   if(a.due&&b.due) return new Date(a.due)-new Date(b.due);
   if(a.due) return -1; if(b.due) return 1;
   return b.createdAt-a.createdAt; }
+function byDateField(a,b,f){ const av=a[f], bv=b[f];
+  if(av&&bv) return new Date(av)-new Date(bv);
+  if(av) return -1; if(bv) return 1; return byPriorityThenDue(a,b); }
 function activeSort(a,b){
   if(isSnoozed(a)!==isSnoozed(b)) return isSnoozed(a)?1:-1;
   if(isFocusToday(a)!==isFocusToday(b)) return isFocusToday(a)?-1:1;
+  const sb=(typeof $==="function" && $("#sortBy")) ? $("#sortBy").value : "smart";
+  if(sb==="deadline") return byDateField(a,b,"deadline");
+  if(sb==="due") return byDateField(a,b,"due");
+  if(sb==="priority") return (prRank[a.priority]-prRank[b.priority])||byPriorityThenDue(a,b);
+  if(sb==="created") return b.createdAt-a.createdAt;
   if(mode==="depressive") return (eR(a)-eR(b))||(estVal(a)-estVal(b))||byPriorityThenDue(a,b);
   if(mode==="manic") return (prRank[a.priority]-prRank[b.priority])||(eR(b)-eR(a))||byPriorityThenDue(a,b);
   return byPriorityThenDue(a,b); }
@@ -789,6 +822,7 @@ function card(t){
   if(t.category) tags.push('<span class="tag tag-cat">'+esc(t.category)+'</span>');
   if(t.due){ const lbl=t.status==="waiting"?"chase ":""; const od=overdue?(t.status==="waiting"?" · now":" · overdue"):"";
     tags.push('<span class="tag tag-due '+(overdue?"overdue":"")+'">&#9200; '+lbl+fmtDue(t.due)+od+'</span>'); }
+  { const dl=deadlineTag(t); if(dl && t.status!=="done") tags.push(dl); }
   if(t.anxiety) tags.push('<span class="tag tag-anx">needs a nudge</span>');
   if(t.horizon) tags.push('<span class="tag tag-horizon">'+t.horizon+'</span>');
   if(t.estimate) tags.push('<span class="tag tag-est">~'+fmtMin(t.estimate)+'</span>');
@@ -938,10 +972,16 @@ function refreshDueDow(){ const r=dueDowText($("#mDue").value); const el=$("#mDu
   if(due){ g.href=gcalUrl({title:$("#mName").value,due:due,notes:$("#mNotes").value,estimate:curEstMin()}); g.style.display="inline-block"; }
   else g.style.display="none"; }
 function refreshNthWrap(){ $("#nthWrap").style.display=$("#mRecur").value==="monthly_nth"?"grid":"none"; }
+function refreshDeadlineDow(){ const v=$("#mDeadline").value; const el=$("#mDeadlineDow");
+  if(!v){ el.textContent=""; return; }
+  const n=daysUntil(v); const d=new Date(v+"T00:00:00");
+  const wd=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];
+  let s=wd; if(n<0) s+=" · "+(-n)+" days ago"; else if(n===0) s+=" · today"; else if(n===1) s+=" · tomorrow"; else s+=" · in "+n+" days";
+  el.textContent=s; el.style.color=(n!=null&&n<=1)?"var(--hi)":"var(--muted)"; }
 let editId=null;
 function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return;
   $("#mName").value=t.title; $("#mNotes").value=t.notes||"";
-  $("#mCat").value=t.category||""; $("#mDue").value=t.due||"";
+  $("#mCat").value=t.category||""; $("#mDue").value=t.due||""; $("#mDeadline").value=t.deadline||"";
   setEstSelects(t.estimate||0);
   $("#mEnergy").value=t.energy||"";
   $("#mHorizon").value=t.horizon||""; $("#mRecur").value=t.recur||"";
@@ -955,7 +995,7 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   $("#mAnx").checked=!!t.anxiety; $("#mHelp").value=t.helpFor||"";
   setSeg("#mPr",t.priority); setSeg("#mStatus",t.status);
   $("#waitWrap").style.display=t.status==="waiting"?"grid":"none";
-  refreshDueDow(); refreshNthWrap();
+  refreshDueDow(); refreshDeadlineDow(); refreshNthWrap();
   { const sp=$("#estSpent"); const sec=t.timeSpentSec||0;
     if(sec>=60){ sp.style.display="block"; sp.innerHTML="⏱ Focus time logged so far: <b>"+fmtMin(Math.round(sec/60))+"</b>"+((parseInt(t.estimate)||0)?(" of ~"+fmtMin(t.estimate)+" estimated"):""); }
     else { sp.style.display="none"; sp.innerHTML=""; } }
@@ -972,6 +1012,8 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   refreshCats(); $("#modal").classList.add("show"); }
 $("#mDue").addEventListener("change",refreshDueDow);
 $("#mDue").addEventListener("input",refreshDueDow);
+$("#mDeadline").addEventListener("change",refreshDeadlineDow);
+$("#mDeadline").addEventListener("input",refreshDeadlineDow);
 $("#mRecur").addEventListener("change",refreshNthWrap);
 function setSeg(sel,val){ document.querySelectorAll(sel+" button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val)); }
 function getSeg(sel){ const b=document.querySelector(sel+" button.sel"); return b?b.dataset.v:""; }
@@ -980,7 +1022,7 @@ $("#mLocOtherText").addEventListener("input",()=>{ $("#mLocOther").checked=$("#m
 document.querySelectorAll("#mStatus button").forEach(b=>b.onclick=()=>{ setSeg("#mStatus",b.dataset.v); $("#waitWrap").style.display=b.dataset.v==="waiting"?"grid":"none"; });
 $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.title=$("#mName").value.trim()||t.title; t.notes=$("#mNotes").value.trim();
-  t.category=$("#mCat").value.trim(); t.due=$("#mDue").value;
+  t.category=$("#mCat").value.trim(); t.due=$("#mDue").value; t.deadline=$("#mDeadline").value;
   { const tot=curEstMin(); t.estimate=tot?String(tot):""; } t.energy=$("#mEnergy").value;
   t.horizon=$("#mHorizon").value; t.recur=$("#mRecur").value;
   t.recurOrd=parseInt($("#mRecurOrd").value); t.recurDow=parseInt($("#mRecurDow").value);
@@ -1101,7 +1143,7 @@ $("#tReset").onclick=()=>{ stopTimer(); resetTimer(); };
 
 /* ---- CSV export ---- */
 $("#exportBtn").onclick=()=>{
-  const cols=["title","category","priority","status","locations","helpFor","anxiety","horizon","energy","estimate","due","recur","waitOn","waitSince","notes","lastUpdate","pickUpNext"];
+  const cols=["title","category","priority","status","locations","helpFor","anxiety","horizon","energy","estimate","due","deadline","recur","waitOn","waitSince","notes","lastUpdate","pickUpNext"];
   const rows=live().map(t=>{ const le=t.log&&t.log.length?t.log[t.log.length-1]:null;
     const lastUpdate=le?[le.summary,le.did].filter(Boolean).join(": "):""; const pickUpNext=le?(le.resume||""):"";
     return cols.map(c=>{ let v; if(c==="anxiety")v=t.anxiety?"yes":""; else if(c==="lastUpdate")v=lastUpdate; else if(c==="pickUpNext")v=pickUpNext; else if(c==="locations")v=taskLocs(t).join(" | "); else v=(t[c]==null?"":t[c]);
@@ -1163,6 +1205,8 @@ $("#recap").onclick=e=>{ if(e.target.id==="recap") $("#recap").classList.remove(
 })();
 $("#quickAdd").addEventListener("keydown",e=>{ if(e.key==="Enter")addQuick(); });
 $("#catFilter").onchange=render; $("#prFilter").onchange=render; $("#hideDone").onchange=render; $("#anxFilter").onchange=render; $("#promisedFilter").onchange=render;
+$("#sortBy").onchange=()=>{ try{localStorage.setItem("td_sort",$("#sortBy").value);}catch(e){} render(); };
+try{ const sv=localStorage.getItem("td_sort"); if(sv) $("#sortBy").value=sv; }catch(e){}
 $("#storeNote").onclick=()=>{ if(fbEnabled()){ syncState="saving"; syncNote(); syncPull(); fbPushDebounced(); } };
 $("#search").addEventListener("input",()=>{ $("#searchClear").style.display=$("#search").value?"block":"none"; render(); });
 $("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.display="none"; render(); $("#search").focus(); };
