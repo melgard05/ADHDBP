@@ -135,6 +135,7 @@
   .t-actions{display:flex;gap:4px;flex:none;opacity:0;transition:.12s}
   .task:hover .t-actions,.task:focus-within .t-actions{opacity:1}
   .icon-btn{border:0;background:transparent;color:var(--muted);padding:4px 6px;border-radius:8px;font-size:14px;cursor:pointer}
+  @media (hover:none){ .t-actions{opacity:1} }
   .icon-btn:hover{background:var(--line2);color:var(--ink)}
   .empty{color:var(--muted);font-size:13px;padding:14px;border:1px dashed var(--line);
     border-radius:12px;text-align:center;background:var(--panel)}
@@ -162,6 +163,13 @@
   .recap-day h4{margin:0 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .recap-item{padding:7px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;font-size:14px}
   .recap-empty{color:var(--muted);font-size:14px;padding:8px 0}
+  .today-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:4px}
+  .tp-head{font-weight:800;font-size:15px}
+  .tp-sub{color:var(--muted);font-size:13px;margin:4px 0 10px}
+  .tp-list{display:flex;flex-direction:column;gap:6px}
+  .tp-item{text-align:left;width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;font-size:14px;cursor:pointer}
+  .tp-item.on{border-color:var(--accent);background:rgba(124,92,255,.10);font-weight:700;color:var(--accent)}
+  .tp-empty{color:var(--muted);font-size:14px}
   .sheet{background:var(--panel);border-radius:18px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(20,25,45,.3)}
   .sheet h3{padding:18px 20px;border-bottom:1px solid var(--line);font-size:16px}
   .sheet h3 small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:3px}
@@ -195,10 +203,10 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">TaskDesk <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 18</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">TaskDesk <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 20</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
-        <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127919; Pick one</button>
+        <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
         <button class="btn-ghost" id="recapBtn" title="What I finished this week">&#128202; Week</button>
         <button class="btn-ghost" id="notifyBtn" title="Turn on reminders">&#128276; Reminders</button>
         <button class="btn-ghost" id="tplBtn" title="Edit follow-up message templates">&#9881; Templates</button>
@@ -672,9 +680,23 @@ function render(){
   ];
   const board=$("#board"); board.innerHTML="";
   const nav=$("#laneNav"); nav.innerHTML="";
+  if(view==="today"){
+    const fc=focusCount();
+    const panel=document.createElement("div"); panel.className="today-panel";
+    panel.innerHTML='<div class="tp-head">⭐ Today\'s 3 — '+fc+'/3 chosen</div>'+
+      '<div class="tp-sub">Tap to pick up to three things to focus on today. Everything else stays safe on your full list.</div>';
+    const pl=document.createElement("div"); pl.className="tp-list";
+    const cands=live().filter(t=>(t.status==="todo"||t.status==="doing")&&!isSnoozed(t)).sort(activeSort);
+    if(!cands.length){ const e=document.createElement("div"); e.className="tp-empty"; e.textContent="No active tasks yet — add some up top first."; pl.appendChild(e); }
+    cands.forEach(t=>{ const r=document.createElement("button"); r.className="tp-item"+(isFocusToday(t)?" on":"");
+      r.innerHTML=(isFocusToday(t)?"★ ":"☆ ")+esc(t.title);
+      r.onclick=()=>toggleFocus(t); pl.appendChild(r); });
+    panel.appendChild(pl); board.appendChild(panel);
+  }
   lanes.forEach(L=>{
     if(L.key==="done" && $("#hideDone").checked) return;
     let items=list.filter(L.match);
+    if(view==="today" && !items.length) return;
     items.sort(L.key==="active"?activeSort:L.key==="done"?(a,b)=>(b.completedAt||0)-(a.completedAt||0):byPriorityThenDue);
     const lane=document.createElement("div"); lane.className="lane "+L.cls; lane.id="lane-"+L.key;
     lane.innerHTML='<div class="lane-head"><h2>'+L.label+'</h2><span class="count">'+items.length+'</span></div>';
@@ -725,7 +747,7 @@ function card(t){
     (prog?'<div class="t-prog">↳ '+prog+'</div>':"")+
     (tags.length?'<div class="t-meta">'+tags.join("")+'</div>':"")+'</div>'+
     '<div class="t-actions">'+
-    (act?'<button class="icon-btn '+(isFocusToday(t)?"star-on":"")+'" data-act="star" title="Today\'s 3">'+(isFocusToday(t)?"★":"☆")+'</button>':"")+
+    (act?'<button class="icon-btn '+(isFocusToday(t)?"star-on":"")+'" data-act="star" title="Add to Today\'s 3">'+(isFocusToday(t)?"&#9733;":"&#9734;")+'</button>':"")+
     (act?'<button class="icon-btn" data-act="start" title="Start now (focus)">&#9654;</button>':"")+
     (act?'<button class="icon-btn" data-act="nap" title="Not now — snooze 3 days">&#128164;</button>':"")+
     (act?'<button class="icon-btn" data-act="wait" title="Done my part — park &amp; set a chase reminder">&#8987;</button>':"")+
