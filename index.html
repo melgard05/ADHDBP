@@ -150,8 +150,8 @@
   .focus-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .timer{font-size:42px;font-weight:800;letter-spacing:-.02em;margin:8px 0;font-variant-numeric:tabular-nums}
   .timer-row{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
-  #modal,#chase,#tpl,#complete,#recap,#settings{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
-  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show{display:grid}
+  #modal,#chase,#tpl,#complete,#recap,#settings,#qnote{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
+  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show,#qnote.show{display:grid}
   .set-sec{padding:12px 0;border-bottom:1px solid var(--line)}
   .set-sec:last-child{border-bottom:0}
   .set-h{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
@@ -170,6 +170,14 @@
   .dl-soon{background:#FFEDD5;color:#C2410C}
   .dl-near{background:#FEF9C3;color:#A16207}
   .dl-far{background:#ECFDF5;color:#047857}
+  .req{font-size:9.5px;font-weight:800;color:#B91C1C;text-transform:uppercase;letter-spacing:.04em;background:#FEE2E2;padding:1px 5px;border-radius:5px;margin-left:6px;vertical-align:middle}
+  .sub-row{display:flex;gap:8px;align-items:center}
+  .sub-row span{flex:1;font-size:14px}
+  .tag-sub{background:#EEF2FF;color:#4F46E5}
+  .tag-parent{background:#F1F5F9;color:#475569}
+  .subcard{position:relative;border-left:3px solid var(--accent2,#C7B6FF)}
+  .subcard::before{content:"↳";position:absolute;left:-13px;top:14px;color:var(--muted);font-size:13px}
+  .subcard .tag-sub{display:none}
   #micBtn.rec{background:var(--hi);color:#fff;animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
   .task.focus{box-shadow:inset 4px 0 0 var(--accent)}
@@ -221,7 +229,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 23</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 25</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -300,6 +308,7 @@
     </div>
     <div class="focus-actions">
       <button class="btn-primary" id="fDone">&#10003; Update / done</button>
+      <button id="fNote">&#128221; Quick note</button>
       <button id="fSkip">Next task →</button>
       <button class="btn-ghost" id="fClose">Close</button>
     </div>
@@ -379,11 +388,28 @@
         <div class="field"><label>Weekday</label>
           <select id="mRecurDow"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></div>
       </div>
+      <div class="field"><label>Sub-tasks</label>
+        <div id="mSubs" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px"><input id="mSubAdd" placeholder="Add a sub-task / next thing…" style="flex:1"><button type="button" id="mSubAddBtn" class="btn-ghost">+ Add</button></div>
+      </div>
       <div class="field" id="mLogWrap" style="display:none"><label>Progress log</label><div id="mLog" style="font-size:12.5px;color:var(--muted)"></div></div>
     </div>
     <div class="sheet-foot">
       <button class="btn-ghost" id="mDelete" style="color:var(--hi)">Delete</button>
       <div style="display:flex;gap:8px"><button id="mCancel">Cancel</button><button class="btn-primary" id="mSave">Save</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="qnote">
+  <div class="sheet" style="max-width:440px">
+    <h3>Quick note <small id="qnInfo"></small></h3>
+    <div class="sheet-body">
+      <div class="field"><label>Just jot it down — nothing else needed</label>
+        <textarea id="qnText" placeholder="A quick note to your future self…"></textarea></div>
+    </div>
+    <div class="sheet-foot"><span></span>
+      <div style="display:flex;gap:8px"><button id="qnCancel">Cancel</button><button class="btn-primary" id="qnSave">Save note</button></div>
     </div>
   </div>
 </div>
@@ -401,8 +427,17 @@
         </div>
         <input id="cDid" placeholder="More detail (optional)" style="margin-top:8px">
       </div>
-      <div class="field"><label>Where did you leave off?</label>
-        <input id="cResume" placeholder="So you know where to start next time (optional)"></div>
+      <div id="cBlockWrap" style="display:none">
+        <div class="field"><label>What's blocking you? <span class="req">required</span></label>
+          <input id="cBlocker" placeholder="What stopped you / what's in the way"></div>
+        <div class="field"><label>What would get you past it?</label>
+          <input id="cUnblock" placeholder="The action that unblocks you">
+          <div class="set-note">Optional — if you fill this in, it's added as a sub-task under this one.</div></div>
+      </div>
+      <div class="field" id="cResumeWrap"><label>Where did you leave off? <span class="req" id="cResumeReq">required</span></label>
+        <input id="cResume" placeholder="So you know exactly where to pick back up"></div>
+      <div class="field" id="cNextStepWrap"><label>What's the very next step? <span class="req" id="cNextStepReq">required</span></label>
+        <input id="cNextStep" placeholder="The single next physical action"></div>
       <div class="field"><label>What's the next stage?</label>
         <div class="seg" id="cNext">
           <button data-v="done">Done — close it</button>
@@ -413,6 +448,13 @@
         <div id="cDoneHint" style="font-size:11.5px;color:var(--muted);margin-top:6px">“Done — close it” unlocks once you select <b>Finished it</b> above.</div>
       </div>
       <div class="field" id="cWaitWrap" style="display:none"><label>Waiting on</label><input id="cWaitOn" placeholder="Who / what"></div>
+      <div class="grid2">
+        <div class="field"><label>Priority</label>
+          <div class="seg" id="cPriority">
+            <button type="button" data-v="high">High</button><button type="button" data-v="medium">Med</button><button type="button" data-v="low">Low</button>
+          </div></div>
+        <div class="field"><label>Reminder — set, change, or clear</label><input id="cRemind" type="datetime-local"></div>
+      </div>
     </div>
     <div class="sheet-foot"><span></span>
       <div style="display:flex;gap:8px"><button id="cCancel">Cancel</button><button class="btn-primary" id="cSave">Log update</button></div>
@@ -679,7 +721,7 @@ function parseQuick(raw){
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",recurOrd:1,recurDow:1,whenHint:"",waitOn:"",waitSince:"",
-  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,deadline:"",log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,deadline:"",parentId:"",log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
   const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,locs:p.loc?[p.loc]:[],helpFor:p.helpFor,due:p.due});
@@ -800,7 +842,7 @@ function render(){
       e.textContent = L.key==="waiting" ? "Nothing parked here. Hit the ⏳ on a task after you've done your part."
         : L.key==="done" ? "Completed tasks land here." : "Clear. Add something above or pull from Next.";
       lane.appendChild(e); }
-    items.forEach(t=>lane.appendChild(card(t)));
+    renderLaneItems(lane, items);
     board.appendChild(lane);
     const nb=document.createElement("button"); nb.className="lane-nav-btn "+L.cls;
     nb.innerHTML=({active:"To do",waiting:"Waiting",done:"Done"}[L.key])+' <b>'+items.length+'</b>';
@@ -808,6 +850,16 @@ function render(){
     nav.appendChild(nb);
   });
   renderAlerts(); renderSuggest();
+}
+function renderLaneItems(lane, items){
+  const ids=new Set(items.map(t=>t.id));
+  const byParent={};
+  items.forEach(t=>{ const key=(t.parentId && ids.has(t.parentId))?t.parentId:"__root"; (byParent[key]=byParent[key]||[]).push(t); });
+  function emit(list, depth){ list.forEach(t=>{ const c=card(t);
+    if(depth>0){ c.classList.add("subcard"); c.style.marginLeft=Math.min(depth,3)*16+"px"; }
+    lane.appendChild(c);
+    const kids=byParent[t.id]; if(kids) emit(kids, depth+1); }); }
+  emit(byParent["__root"]||[], 0);
 }
 function card(t){
   const el=document.createElement("div");
@@ -823,6 +875,8 @@ function card(t){
   if(t.due){ const lbl=t.status==="waiting"?"chase ":""; const od=overdue?(t.status==="waiting"?" · now":" · overdue"):"";
     tags.push('<span class="tag tag-due '+(overdue?"overdue":"")+'">&#9200; '+lbl+fmtDue(t.due)+od+'</span>'); }
   { const dl=deadlineTag(t); if(dl && t.status!=="done") tags.push(dl); }
+  if(t.parentId){ const par=tasks.find(x=>x.id===t.parentId&&!x.deleted); if(par) tags.push('<span class="tag tag-sub" title="Sub-task">↳ '+esc(par.title.length>24?par.title.slice(0,24)+"…":par.title)+'</span>'); }
+  { const kids=live().filter(x=>x.parentId===t.id); if(kids.length){ const dn=kids.filter(k=>k.status==="done").length; tags.push('<span class="tag tag-parent">&#128206; '+dn+'/'+kids.length+' sub-tasks</span>'); } }
   if(t.anxiety) tags.push('<span class="tag tag-anx">needs a nudge</span>');
   if(t.horizon) tags.push('<span class="tag tag-horizon">'+t.horizon+'</span>');
   if(t.estimate) tags.push('<span class="tag tag-est">~'+fmtMin(t.estimate)+'</span>');
@@ -833,9 +887,13 @@ function card(t){
     tags.push('<span class="tag tag-wait">waiting'+(t.waitOn?": "+esc(t.waitOn):"")+since+'</span>'); }
   const last=t.log&&t.log.length?t.log[t.log.length-1]:null;
   let prog="";
-  if(last){ const bits=[]; if(last.summary)bits.push(last.summary); if(last.did)bits.push(last.did);
-    prog=bits.map(esc).join(" — ");
-    if(last.resume) prog+=(prog?'<br>':'')+'<b>▶ pick up:</b> '+esc(last.resume); }
+  if(last){
+    if(last.summary==="note"){ prog='&#128221; '+esc(last.did||""); }
+    else { const bits=[]; if(last.summary)bits.push(last.summary); if(last.did)bits.push(last.did);
+      prog=bits.map(esc).join(" — ");
+      if(last.blocker) prog+=(prog?'<br>':'')+'<b>⛔ blocked:</b> '+esc(last.blocker);
+      if(last.nextStep) prog+=(prog?'<br>':'')+'<b>▶ next:</b> '+esc(last.nextStep);
+      else if(last.resume) prog+=(prog?'<br>':'')+'<b>▶ pick up:</b> '+esc(last.resume); } }
   const act=t.status==="todo"||t.status==="doing";
   el.innerHTML=
     '<div class="check '+(t.status==="done"?"on":"")+'" role="checkbox" aria-checked="'+(t.status==="done")+'" tabindex="0" data-act="check"></div>'+
@@ -850,6 +908,7 @@ function card(t){
     (act?'<button class="icon-btn" data-act="wait" title="Done my part — park &amp; set a chase reminder">&#8987;</button>':"")+
     (t.status==="waiting"?'<button class="icon-btn" data-act="chase" title="Copy a follow-up message">&#128203;</button>':"")+
     (t.status==="waiting"?'<button class="icon-btn" data-act="snooze" title="Push chase 3 days">&#128564;</button>':"")+
+    (act?'<button class="icon-btn" data-act="note" title="Quick note (no questions)">&#128221;</button>':"")+
     '<button class="icon-btn" data-act="edit" title="Edit">&#9998;</button></div>';
   const q=s=>el.querySelector(s);
   q('[data-act="check"]').onclick=()=>{ if(t.status==="done"){ t.status="todo"; t.completedAt=null; touch(t); save(); render(); } else openComplete(t.id); };
@@ -857,6 +916,7 @@ function card(t){
   if(q('[data-act="star"]')) q('[data-act="star"]').onclick=()=>toggleFocus(t);
   if(q('[data-act="start"]')) q('[data-act="start"]').onclick=()=>openFocusOn(t.id);
   if(q('[data-act="nap"]')) q('[data-act="nap"]').onclick=()=>snoozeTask(t);
+  if(q('[data-act="note"]')) q('[data-act="note"]').onclick=()=>openQNote(t.id);
   if(q('[data-act="wait"]')) q('[data-act="wait"]').onclick=()=>moveToWaiting(t);
   if(q('[data-act="chase"]')) q('[data-act="chase"]').onclick=()=>openChase(t);
   if(q('[data-act="snooze"]')) q('[data-act="snooze"]').onclick=()=>snoozeChase(t);
@@ -972,6 +1032,15 @@ function refreshDueDow(){ const r=dueDowText($("#mDue").value); const el=$("#mDu
   if(due){ g.href=gcalUrl({title:$("#mName").value,due:due,notes:$("#mNotes").value,estimate:curEstMin()}); g.style.display="inline-block"; }
   else g.style.display="none"; }
 function refreshNthWrap(){ $("#nthWrap").style.display=$("#mRecur").value==="monthly_nth"?"grid":"none"; }
+function renderSubs(pid){ const box=$("#mSubs"); const kids=live().filter(x=>x.parentId===pid);
+  if(!kids.length){ box.innerHTML='<div class="set-note">No sub-tasks yet — break this into smaller steps below.</div>'; return; }
+  box.innerHTML="";
+  kids.forEach(k=>{ const row=document.createElement("div"); row.className="sub-row";
+    const done=k.status==="done";
+    row.innerHTML='<input type="checkbox" '+(done?"checked":"")+'><span style="'+(done?"text-decoration:line-through;color:var(--muted)":"")+'">'+esc(k.title)+'</span><button type="button" class="btn-ghost" style="padding:2px 8px;font-size:12px">open</button>';
+    row.querySelector("input").onchange=e=>{ if(e.target.checked){ k.status="done"; k.completedAt=now(); } else { k.status="todo"; k.completedAt=null; } touch(k); save(); renderSubs(pid); };
+    row.querySelector("button").onclick=()=>openEdit(k.id);
+    box.appendChild(row); }); }
 function refreshDeadlineDow(){ const v=$("#mDeadline").value; const el=$("#mDeadlineDow");
   if(!v){ el.textContent=""; return; }
   const n=daysUntil(v); const d=new Date(v+"T00:00:00");
@@ -995,7 +1064,7 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   $("#mAnx").checked=!!t.anxiety; $("#mHelp").value=t.helpFor||"";
   setSeg("#mPr",t.priority); setSeg("#mStatus",t.status);
   $("#waitWrap").style.display=t.status==="waiting"?"grid":"none";
-  refreshDueDow(); refreshDeadlineDow(); refreshNthWrap();
+  refreshDueDow(); refreshDeadlineDow(); refreshNthWrap(); renderSubs(id);
   { const sp=$("#estSpent"); const sec=t.timeSpentSec||0;
     if(sec>=60){ sp.style.display="block"; sp.innerHTML="⏱ Focus time logged so far: <b>"+fmtMin(Math.round(sec/60))+"</b>"+((parseInt(t.estimate)||0)?(" of ~"+fmtMin(t.estimate)+" estimated"):""); }
     else { sp.style.display="none"; sp.innerHTML=""; } }
@@ -1014,6 +1083,11 @@ $("#mDue").addEventListener("change",refreshDueDow);
 $("#mDue").addEventListener("input",refreshDueDow);
 $("#mDeadline").addEventListener("change",refreshDeadlineDow);
 $("#mDeadline").addEventListener("input",refreshDeadlineDow);
+$("#mSubAddBtn").onclick=()=>{ const v=$("#mSubAdd").value.trim(); if(!v||!editId)return;
+  const par=tasks.find(x=>x.id===editId); const pr=par?par.priority:"medium";
+  const sub=newTask({title:v,parentId:editId,priority:pr,horizon:"now",status:"todo"}); tasks.unshift(sub);
+  $("#mSubAdd").value=""; save(); renderSubs(editId); render(); };
+$("#mSubAdd").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("#mSubAddBtn").onclick(); } });
 $("#mRecur").addEventListener("change",refreshNthWrap);
 function setSeg(sel,val){ document.querySelectorAll(sel+" button").forEach(b=>b.classList.toggle("sel",b.dataset.v===val)); }
 function getSeg(sel){ const b=document.querySelector(sel+" button.sel"); return b?b.dataset.v:""; }
@@ -1044,36 +1118,72 @@ function closeModal(){ $("#modal").classList.remove("show"); editId=null; }
 
 /* ---- completion / progress modal ---- */
 let completeId=null;
+let qnoteId=null;
+function openQNote(id){ const t=tasks.find(x=>x.id===id); if(!t)return; qnoteId=id;
+  $("#qnInfo").textContent="· "+t.title; $("#qnText").value="";
+  $("#qnote").classList.add("show"); setTimeout(()=>$("#qnText").focus(),50); }
+$("#qnCancel").onclick=()=>$("#qnote").classList.remove("show");
+$("#qnote").onclick=e=>{ if(e.target.id==="qnote") $("#qnote").classList.remove("show"); };
+$("#qnSave").onclick=()=>{ const t=tasks.find(x=>x.id===qnoteId); if(!t)return;
+  const v=$("#qnText").value.trim(); if(!v){ $("#qnText").focus(); return; }
+  if(!t.log)t.log=[]; t.log.push({t:now(),summary:"note",did:v,next:t.status});
+  touch(t); save(); $("#qnote").classList.remove("show"); render();
+  if($("#focus").classList.contains("show")) showFocus();
+  toast("Note saved"); };
 function updateDoneEnable(){
-  const fin=getSeg("#cChips")==="Finished it";
+  const chip=getSeg("#cChips");
+  const fin=chip==="Finished it";
+  const blocked=chip==="Hit a blocker";
   const dn=document.querySelector('#cNext button[data-v="done"]');
   if(dn) dn.disabled=!fin;
   if(!fin && getSeg("#cNext")==="done"){ setSeg("#cNext","doing"); $("#cWaitWrap").style.display="none"; }
   $("#cDoneHint").style.display=fin?"none":"block";
+  $("#cBlockWrap").style.display=blocked?"block":"none";
+  $("#cResumeWrap").style.display=fin?"none":"block";
+  $("#cNextStepWrap").style.display=fin?"none":"block";
 }
 function openComplete(id){ completeId=id; const t=tasks.find(x=>x.id===id); if(!t)return;
-  $("#cInfo").textContent="· "+t.title; $("#cDid").value=""; $("#cResume").value="";
+  $("#cInfo").textContent="· "+t.title;
+  $("#cDid").value=""; $("#cResume").value=""; $("#cNextStep").value=""; $("#cBlocker").value=""; $("#cUnblock").value="";
   document.querySelectorAll("#cChips button").forEach(b=>b.classList.remove("sel"));
   setSeg("#cNext","doing"); $("#cWaitWrap").style.display="none";
   $("#cWaitOn").value=t.waitOn||"";
+  setSeg("#cPriority", t.priority||"medium");
+  $("#cRemind").value=t.due||"";
   updateDoneEnable();
   $("#complete").classList.add("show"); setTimeout(()=>$("#cDid").focus(),50); }
 document.querySelectorAll("#cChips button").forEach(b=>b.onclick=()=>{ const was=b.classList.contains("sel");
   document.querySelectorAll("#cChips button").forEach(x=>x.classList.remove("sel")); if(!was)b.classList.add("sel"); updateDoneEnable(); });
 document.querySelectorAll("#cNext button").forEach(b=>b.onclick=()=>{ if(b.disabled)return; setSeg("#cNext",b.dataset.v); $("#cWaitWrap").style.display=b.dataset.v==="waiting"?"grid":"none"; });
+document.querySelectorAll("#cPriority button").forEach(b=>b.onclick=()=>setSeg("#cPriority",b.dataset.v));
 $("#cCancel").onclick=()=>$("#complete").classList.remove("show");
 $("#cSave").onclick=()=>{ const t=tasks.find(x=>x.id===completeId); if(!t)return;
-  const summary=getSeg("#cChips"); const did=$("#cDid").value.trim(); const resume=$("#cResume").value.trim(); const next=getSeg("#cNext")||"doing";
+  const summary=getSeg("#cChips"); const did=$("#cDid").value.trim();
+  const resume=$("#cResume").value.trim(); const nextStep=$("#cNextStep").value.trim();
+  const blocker=$("#cBlocker").value.trim(); const unblock=$("#cUnblock").value.trim();
+  const next=getSeg("#cNext")||"doing";
+  const blocked=summary==="Hit a blocker";
+  const fin=summary==="Finished it"||next==="done";
+  if(blocked && !blocker){ toast("Add what's blocking you."); $("#cBlocker").focus(); return; }
+  if(!fin){
+    if(!resume){ toast("Add where you left off — it's required."); $("#cResume").focus(); return; }
+    if(!nextStep){ toast("Add the very next step — it's required."); $("#cNextStep").focus(); return; }
+  }
   if(next==="done" && !confirm("Mark “"+t.title+"” complete and close it?")) return;
-  if(!t.log)t.log=[]; t.log.push({t:now(),summary:summary,did:did,resume:resume,next:next});
+  t.priority=getSeg("#cPriority")||t.priority;
+  t.due=$("#cRemind").value;
+  if(!t.log)t.log=[]; t.log.push({t:now(),summary:summary,did:did,resume:resume,nextStep:nextStep,blocker:blocker,next:next});
   if(next==="done"){ t.status="done"; t.completedAt=now(); spawnRecur(t); }
   else if(next==="waiting"){ t.status="waiting"; if(!t.waitSince)t.waitSince=todayStr();
     t.waitOn=$("#cWaitOn").value.trim()||t.waitOn; if(!t.due)t.due=chaseDate(3); t.completedAt=null; }
   else { t.status=next; t.completedAt=null; }
-  t.reminded=false; touch(t); save(); $("#complete").classList.remove("show"); render();
+  t.reminded=false; touch(t);
+  let madeSub=false;
+  if(blocked && unblock){ const sub=newTask({title:unblock,parentId:t.id,priority:t.priority,horizon:"now",status:"todo"}); tasks.unshift(sub); madeSub=true; }
+  save(); $("#complete").classList.remove("show"); render();
   if($("#focus").classList.contains("show")) showFocus();
   if(next==="done") confetti();
-  toast(next==="done"?"Logged & closed":"Logged — moved to "+next); };
+  toast(next==="done"?"Logged & closed":(madeSub?"Logged — sub-task added":"Logged — moved to "+next)); };
 
 /* ---- chase modal ---- */
 let chaseTask=null;
@@ -1134,6 +1244,7 @@ function closeFocus(){ $("#focus").classList.remove("show"); stopTimer(); }
 $("#focusBtn").onclick=openFocus; $("#fClose").onclick=closeFocus;
 $("#fSkip").onclick=()=>{ focusIdx++; stopTimer(); resetTimer(); showFocus(); };
 $("#fDone").onclick=()=>{ openComplete($("#focus").dataset.tid); };
+$("#fNote").onclick=()=>{ openQNote($("#focus").dataset.tid); };
 function tick(){ timerLeft--; updTimer(); if(timerLeft<=0){ stopTimer(); try{ if(Notification.permission==="granted")new Notification("Focus block done",{body:"Nice. Take a short break."}); }catch(e){} } }
 function updTimer(){ const m=Math.floor(timerLeft/60),s=timerLeft%60; $("#timer").textContent=m+":"+pad(s); }
 function stopTimer(){ if(timerInt){clearInterval(timerInt);timerInt=null;} flushFocus(); $("#tStart").textContent=startLabel(); }
@@ -1213,7 +1324,7 @@ $("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.d
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
 document.querySelectorAll("#modebar button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 document.querySelectorAll("#locToggle button").forEach(b=>b.onclick=()=>setLoc(b.dataset.l));
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); $("#settings").classList.remove("show"); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); $("#settings").classList.remove("show"); $("#qnote").classList.remove("show"); } });
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkReminders(); syncPull(); } });
 (function(){ let ticking=false; const btn=$("#toTop");
   btn.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
