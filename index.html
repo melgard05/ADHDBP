@@ -150,8 +150,15 @@
   .focus-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .timer{font-size:42px;font-weight:800;letter-spacing:-.02em;margin:8px 0;font-variant-numeric:tabular-nums}
   .timer-row{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
-  #modal,#chase,#tpl,#complete,#recap,#settings,#qnote{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
-  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show,#qnote.show{display:grid}
+  #modal,#chase,#tpl,#complete,#recap,#settings,#qnote,#bdump,#worry{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
+  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show,#qnote.show,#bdump.show,#worry.show{display:grid}
+  .cap-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .cap-tools button{font-size:12.5px;padding:6px 12px}
+  #bdump textarea,#worry textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:15px;resize:vertical}
+  .mood-dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+  .mood-dot{width:13px;height:13px;border-radius:50%}
+  .mood-depressive{background:#60A5FA}.mood-baseline{background:#34D399}.mood-manic{background:#FBBF24}
+  .streak-badge{font-size:13px;font-weight:700;color:#C2410C;background:#FFEDD5;border-radius:8px;padding:4px 10px;display:inline-block}
   .set-sec{padding:12px 0;border-bottom:1px solid var(--line)}
   .set-sec:last-child{border-bottom:0}
   .set-h{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
@@ -232,7 +239,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 29</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 30</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -246,6 +253,11 @@
       <button class="btn-primary" id="addBtn">Add</button>
     </div>
     <div class="hint">Shortcuts: <b>!high</b> <b>!med</b> <b>!low</b> · <b>#category</b> · <b>~now</b> <b>~next</b> <b>~later</b> · <b>@work</b> <b>@home</b> <b>@cabin</b> <b>@newhouse</b> · <b>&amp;who</b> (promised). Try natural dates: <b>call Casey today at 17:00</b> sets the reminder (24-hour time → shows as 5:00 PM). Write the <b>next physical action</b>.</div>
+    <div class="cap-tools">
+      <button class="btn-ghost" id="bdumpBtn" title="Dump everything on your mind, sort later">&#129504; Brain dump</button>
+      <button class="btn-ghost" id="worryBtn" title="Turn a worry into an action — or let it go">&#128173; Worry</button>
+      <button class="btn-ghost" id="oneThingBtn" title="Just show me one thing to do">&#129496; One thing</button>
+    </div>
 
     <div style="margin-top:12px;position:relative">
       <input id="search" placeholder="🔍  Search tasks or a person's name…" autocomplete="off"
@@ -269,6 +281,7 @@
         <button data-l="all" class="sel">All</button><button data-l="work">📍 Work</button><button data-l="home">🏠 Home</button><button data-l="cabin">🌲 Cabin</button><button data-l="newhouse">🏡 New House</button>
       </div>
       <div class="chip" data-view="today" id="todayChip">⭐ Today</div>
+      <div class="chip" data-view="inbox" id="inboxChip">🧠 Inbox</div>
       <div class="chip active" data-view="all">Any horizon</div>
       <div class="chip" data-view="now">Now</div>
       <div class="chip" data-view="next">Next</div>
@@ -404,6 +417,33 @@
   </div>
 </div>
 
+<div id="bdump">
+  <div class="sheet" style="max-width:480px">
+    <h3>Brain dump</h3>
+    <div class="sheet-body">
+      <div class="field"><label>Empty your head — one thing per line. No need to organize; sort it later.</label>
+        <textarea id="bdumpText" placeholder="pay the water bill&#10;text Phil about the break&#10;look into the culvert permit&#10;…"></textarea></div>
+    </div>
+    <div class="sheet-foot"><span style="font-size:12px;color:var(--muted)">Each line becomes a task in your Inbox.</span>
+      <div style="display:flex;gap:8px"><button id="bdumpCancel">Cancel</button><button class="btn-primary" id="bdumpSave">Add them all</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="worry">
+  <div class="sheet" style="max-width:460px">
+    <h3>Worry → action</h3>
+    <div class="sheet-body">
+      <div class="field"><label>What's on your mind?</label>
+        <textarea id="worryText" placeholder="The thing that's looping in your head…"></textarea></div>
+      <div class="set-note" id="worryHint">Is there a single next step you could take? If yes, make it a task. If there's truly nothing to do right now, it's okay to set it down.</div>
+    </div>
+    <div class="sheet-foot"><button id="worryLetGo">Nothing to do — let it go</button>
+      <div style="display:flex;gap:8px"><button id="worryCancel">Cancel</button><button class="btn-primary" id="worryMakeTask">Make it a task</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="qnote">
   <div class="sheet" style="max-width:440px">
     <h3>Quick note <small id="qnInfo"></small></h3>
@@ -506,6 +546,11 @@
         <div class="set-note">Get pinged even when the app is fully closed. Needs the one-time Cloudflare Worker setup.</div>
       </div>
       <div class="set-sec">
+        <div class="set-h">Mood history</div>
+        <div id="setMoodHist" class="set-note">…</div>
+        <div class="set-note">Each dot is a day you set your mode. This is just for noticing patterns — it's something to share with your care team, not a diagnosis or a judgment.</div>
+      </div>
+      <div class="set-sec">
         <div class="set-h">Follow-up messages</div>
         <div class="set-row"><span>Edit the templates used when you chase someone.</span><button class="btn-ghost" id="tplBtn">&#9881; Edit</button></div>
       </div>
@@ -522,7 +567,10 @@
 
 <div id="recap">
   <div class="sheet">
-    <h3>This week <small id="recapCount"></small></h3>
+    <h3>Wins <small id="recapCount"></small></h3>
+    <div style="padding:0 20px"><div id="recapStreak" style="margin-bottom:10px"></div>
+      <div class="seg" id="recapRange"><button type="button" data-v="week" class="sel">This week</button><button type="button" data-v="all">All time</button></div>
+    </div>
     <div class="sheet-body" id="recapBody"></div>
     <div class="sheet-foot"><span></span><button class="btn-primary" id="recapClose">Close</button></div>
   </div>
@@ -676,7 +724,18 @@ function confetti(){ try{
     P.forEach(p=>{ p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; x.save(); x.translate(p.x,p.y); x.rotate(p.rot); x.fillStyle=p.c; x.fillRect(-p.r,-p.r,p.r*2,p.r*1.2); x.restore(); });
     if(f<110) requestAnimationFrame(go); else c.remove(); })();
 }catch(e){} }
-function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2400); }
+/* ---- mood log, streak, manic guard ---- */
+function loadMoods(){ try{ const r=localStorage.getItem("td_moods"); return r?JSON.parse(r):[]; }catch(e){ return []; } }
+function logMood(m){ try{ const arr=loadMoods(); const today=todayStr();
+  if(arr.length && arr[arr.length-1].d===today) arr[arr.length-1].m=m; else arr.push({d:today,m:m});
+  while(arr.length>120) arr.shift(); localStorage.setItem("td_moods",JSON.stringify(arr)); }catch(e){} }
+function doneStreak(){ const days={}; live().forEach(t=>{ if(t.completedAt){ const d=new Date(t.completedAt); d.setHours(0,0,0,0); days[d.getTime()]=true; } });
+  let streak=0; const day=new Date(); day.setHours(0,0,0,0);
+  // allow today to be empty without breaking the streak (count back from today or yesterday)
+  if(!days[day.getTime()]) day.setDate(day.getDate()-1);
+  while(days[day.getTime()]){ streak++; day.setDate(day.getDate()-1); }
+  return streak; }
+let manicAdds=0;
 function fmtMin(m){ m=parseInt(m)||0; if(!m) return ""; const h=Math.floor(m/60), mm=m%60; return (h?h+"h":"")+(mm?(h?" ":"")+mm+"m":(h?"":"0m")); }
 function estMultiplier(){ const rs=live().filter(t=>t.status==="done"&&(parseInt(t.estimate)||0)>0&&(t.timeSpentSec||0)>0).map(t=>(t.timeSpentSec/60)/parseInt(t.estimate));
   if(rs.length<3) return null; rs.sort((a,b)=>a-b); const mid=rs[Math.floor(rs.length/2)]; return Math.max(0.5,Math.min(4,mid)); }
@@ -742,11 +801,12 @@ function parseQuick(raw){
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",recurOrd:1,recurDow:1,whenHint:"",waitOn:"",waitSince:"",
-  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,deadline:"",parentId:"",log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,deadline:"",parentId:"",inbox:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
   const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,locs:p.loc?[p.loc]:[],helpFor:p.helpFor,due:p.due});
-  tasks.unshift(t); $("#quickAdd").value=""; save(); render(); openEdit(t.id); }
+  tasks.unshift(t); $("#quickAdd").value=""; save(); render(); openEdit(t.id);
+  if(mode==="manic"){ manicAdds++; if(manicAdds===6){ toast("That's a lot of new things on a high-energy day — be kind to future-you. 💜"); } } }
 
 /* ---- recurring ---- */
 function nthWeekdayOfMonth(year, month, ord, dow){
@@ -796,6 +856,7 @@ function visible(){
   const q=$("#search").value.trim().toLowerCase();
   if(q){ return live().filter(t=>[t.title,t.notes,t.category,t.waitOn,t.helpFor].some(f=>(f||"").toLowerCase().includes(q))); }
   if(view==="today"){ let r=live().filter(isFocusToday); if($("#hideDone").checked) r=r.filter(t=>t.status!=="done"); return r; }
+  if(view==="inbox"){ return live().filter(t=>t.inbox && t.status!=="done"); }
   const cf=$("#catFilter").value, pf=$("#prFilter").value, hd=$("#hideDone").checked, anx=$("#anxFilter").checked, prom=$("#promisedFilter").checked;
   return live().filter(t=>{
     if(view!=="all" && t.horizon!==view) return false;
@@ -829,7 +890,8 @@ function activeSort(a,b){
 /* ---- render ---- */
 function render(){
   refreshCats(); syncNote();
-  { const fc=focusCount(); const tc=$("#todayChip"); if(tc) tc.textContent="⭐ Today"+(fc?" ("+fc+")":""); }
+  { const fc=focusCount(); const tc=$("#todayChip"); if(tc) tc.textContent="⭐ Today"+(fc?" ("+fc+")":"");
+    const ic=live().filter(t=>t.inbox&&t.status!=="done").length; const ie=$("#inboxChip"); if(ie) ie.textContent="🧠 Inbox"+(ic?" ("+ic+")":""); }
   $("#doneChip").textContent="✓ "+doneToday()+" today";
   const list=visible();
   const lanes=[
@@ -892,6 +954,7 @@ function card(t){
   if(staleDays(t)>=7) tags.push('<span class="tag tag-stale">🕸 '+staleDays(t)+'d untouched</span>');
   if(isSnoozed(t)) tags.push('<span class="tag tag-snz">💤 snoozed</span>');
   { const ls=taskLocs(t); if(ls.length) tags.push('<span class="tag tag-loc">'+ls.map(locLabel).join(" · ")+'</span>'); }
+  if(t.inbox) tags.push('<span class="tag" style="background:#EDE9FE;color:#6D28D9">🧠 inbox</span>');
   if(t.helpFor) tags.push('<span class="tag tag-help">🤝 for '+esc(t.helpFor)+'</span>');
   if(t.category) tags.push('<span class="tag tag-cat">'+esc(t.category)+'</span>');
   if(t.due){ const lbl=t.status==="waiting"?"chase ":""; const od=overdue?(t.status==="waiting"?" · now":" · overdue"):"";
@@ -1030,7 +1093,7 @@ function renderSuggest(){
     row.appendChild(c); });
   box.appendChild(row);
 }
-function setMode(m){ mode=m; try{localStorage.setItem(MKEY,m);}catch(e){}
+function setMode(m){ mode=m; try{localStorage.setItem(MKEY,m);}catch(e){} logMood(m);
   document.querySelectorAll("#modebar button").forEach(b=>b.classList.toggle("sel",b.dataset.m===m));
   $("#mbHelp").textContent={
     depressive:"Easiest tasks first, and a “start small” shortlist up top. The big stuff is still here when you’re ready — no pressure.",
@@ -1190,7 +1253,7 @@ $("#mLocOtherText").addEventListener("input",()=>{ $("#mLocOther").checked=$("#m
 document.querySelectorAll("#mStatus button").forEach(b=>b.onclick=()=>{ setSeg("#mStatus",b.dataset.v); $("#waitWrap").style.display=b.dataset.v==="waiting"?"grid":"none"; });
 $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.title=$("#mName").value.trim()||t.title; t.notes=$("#mNotes").value.trim();
-  t.category=$("#mCat").value.trim(); t.due=$("#mDue").value; t.deadline=$("#mDeadline").value;
+  t.category=$("#mCat").value.trim(); t.due=$("#mDue").value; t.deadline=$("#mDeadline").value; t.inbox=false;
   { const tot=curEstMin(); t.estimate=tot?String(tot):""; } t.energy=$("#mEnergy").value;
   t.horizon=$("#mHorizon").value; t.recur=$("#mRecur").value;
   t.recurOrd=parseInt($("#mRecurOrd").value); t.recurDow=parseInt($("#mRecurDow").value);
@@ -1339,7 +1402,10 @@ $("#focusBtn").onclick=openFocus; $("#fClose").onclick=closeFocus;
 $("#fSkip").onclick=()=>{ focusIdx++; stopTimer(); resetTimer(); showFocus(); };
 $("#fDone").onclick=()=>{ openComplete($("#focus").dataset.tid); };
 $("#fNote").onclick=()=>{ openQNote($("#focus").dataset.tid); };
-function tick(){ timerLeft--; updTimer(); if(timerLeft<=0){ stopTimer(); if("Notification" in window && Notification.permission==="granted") notify("Focus block done","Nice. Take a short break.","focus-done"); } }
+const FOCUS_CHEERS=["Still with it? You're doing great. 💜","Nice — you're still here. One breath, keep going.","This is the hard part and you're doing it. 👏","Checking in: you've got this. No rush.","Look at you, still focused. Proud of you."];
+function tick(){ timerLeft--; updTimer();
+  if(focusStartTs){ const el=Math.floor((Date.now()-focusStartTs)/1000); if(el>0 && el%300===0){ toast(FOCUS_CHEERS[(el/300-1)%FOCUS_CHEERS.length]); } }
+  if(timerLeft<=0){ stopTimer(); if("Notification" in window && Notification.permission==="granted") notify("Focus block done","Nice. Take a short break.","focus-done"); } }
 function updTimer(){ const m=Math.floor(timerLeft/60),s=timerLeft%60; $("#timer").textContent=m+":"+pad(s); }
 function stopTimer(){ if(timerInt){clearInterval(timerInt);timerInt=null;} flushFocus(); $("#tStart").textContent=startLabel(); }
 function resetTimer(){ if(!timerInt){ timerLeft=focusSecsFor(curFocusTask()); updTimer(); } $("#tStart").textContent=startLabel(); }
@@ -1358,6 +1424,23 @@ $("#exportBtn").onclick=()=>{
 
 /* ---- controls ---- */
 $("#addBtn").onclick=addQuick;
+$("#oneThingBtn").onclick=pickOne;
+$("#bdumpBtn").onclick=()=>{ $("#bdumpText").value=""; $("#bdump").classList.add("show"); setTimeout(()=>$("#bdumpText").focus(),50); };
+$("#bdumpCancel").onclick=()=>$("#bdump").classList.remove("show");
+$("#bdump").onclick=e=>{ if(e.target.id==="bdump") $("#bdump").classList.remove("show"); };
+$("#bdumpSave").onclick=()=>{ const lines=$("#bdumpText").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){ $("#bdump").classList.remove("show"); return; }
+  lines.forEach(line=>{ const t=newTask({title:line, inbox:true}); tasks.unshift(t); });
+  save(); $("#bdump").classList.remove("show"); render();
+  toast("Added "+lines.length+" to your Inbox"); };
+$("#worryBtn").onclick=()=>{ $("#worryText").value=""; $("#worry").classList.add("show"); setTimeout(()=>$("#worryText").focus(),50); };
+$("#worryCancel").onclick=()=>$("#worry").classList.remove("show");
+$("#worry").onclick=e=>{ if(e.target.id==="worry") $("#worry").classList.remove("show"); };
+$("#worryMakeTask").onclick=()=>{ const v=$("#worryText").value.trim(); if(!v){ $("#worryText").focus(); return; }
+  const t=newTask({title:v, inbox:true, anxiety:true}); tasks.unshift(t); save(); $("#worry").classList.remove("show"); render(); openEdit(t.id);
+  toast("Turned into a task — now it lives here, not in your head."); };
+$("#worryLetGo").onclick=()=>{ $("#worry").classList.remove("show");
+  toast("Set down. If it matters, it'll come back — and you can catch it then. 💜"); };
 (function(){ const h=$("#mEstH"), mm=$("#mEstM"); if(h&&mm){
   let oh=""; for(let i=0;i<=12;i++) oh+='<option value="'+i+'">'+i+'</option>'; h.innerHTML=oh;
   let om=""; for(let i=0;i<60;i+=5) om+='<option value="'+i+'">'+pad(i)+'</option>'; mm.innerHTML=om;
@@ -1365,17 +1448,25 @@ $("#addBtn").onclick=addQuick;
   document.querySelectorAll("#estChips button").forEach(b=>b.onclick=()=>{ setEstSelects(parseInt(b.dataset.m)); refreshEstHint(); });
 } })();
 $("#pickBtn").onclick=pickOne;
-function openRecap(){ const cut=now()-7*86400000;
+let recapRange="week";
+function openRecap(){ renderRecap(); $("#recap").classList.add("show"); }
+function renderRecap(){
+  const all=recapRange==="all";
+  const cut=all?0:(now()-7*86400000);
   const done=live().filter(t=>t.completedAt&&t.completedAt>=cut).sort((a,b)=>b.completedAt-a.completedAt);
   $("#recapCount").textContent=done.length?("· "+done.length+" finished"):"";
+  const st=doneStreak();
+  $("#recapStreak").innerHTML = st>=2 ? '<span class="streak-badge">🔥 '+st+'-day streak — nice momentum</span>' : '<span style="font-size:12.5px;color:var(--muted)">Finish something today to start a streak — no pressure, it just counts the good days.</span>';
+  document.querySelectorAll("#recapRange button").forEach(b=>b.classList.toggle("sel",b.dataset.v===recapRange));
   const body=$("#recapBody");
-  if(!done.length){ body.innerHTML='<div class="recap-empty">Nothing closed in the last 7 days yet. The next one you finish shows up here — that counts.</div>'; }
-  else { const byDay={};
-    done.forEach(t=>{ const d=new Date(t.completedAt); const k=d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}); (byDay[k]=byDay[k]||[]).push(t); });
-    body.innerHTML=Object.keys(byDay).map(k=>'<div class="recap-day"><h4>'+esc(k)+'</h4>'+
-      byDay[k].map(t=>'<div class="recap-item">✓ '+esc(t.title)+(t.category?' <span style="color:var(--muted)">· '+esc(t.category)+'</span>':'')+'</div>').join("")+'</div>').join(""); }
-  $("#recap").classList.add("show"); }
+  if(!done.length){ body.innerHTML='<div class="recap-empty">'+(all?"Nothing here yet — the first task you finish shows up, and it stays.":"Nothing closed in the last 7 days yet. The next one you finish lands here — that counts.")+'</div>'; return; }
+  const byDay={};
+  done.forEach(t=>{ const d=new Date(t.completedAt); const k=d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}); (byDay[k]=byDay[k]||[]).push(t); });
+  body.innerHTML=Object.keys(byDay).map(k=>'<div class="recap-day"><h4>'+esc(k)+'</h4>'+
+    byDay[k].map(t=>'<div class="recap-item">✓ '+esc(t.title)+(t.category?' <span style="color:var(--muted)">· '+esc(t.category)+'</span>':'')+'</div>').join("")+'</div>').join("");
+}
 $("#recapBtn").onclick=openRecap;
+document.querySelectorAll("#recapRange button").forEach(b=>b.onclick=()=>{ recapRange=b.dataset.v; renderRecap(); });
 function updateSettings(){
   if(fbEnabled()){
     if(syncState==="ok") $("#setSync").textContent="Synced"+(lastSyncOk?" · "+new Date(lastSyncOk).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"");
@@ -1389,6 +1480,10 @@ function updateSettings(){
   $("#setDoneCount").textContent = dc?("You have "+dc+" completed task"+(dc>1?"s":"")+" on the board."):"No completed tasks to clear.";
   { let pushed=false; try{ pushed=localStorage.getItem("td_push")==="1"; }catch(e){}
     $("#setPush").textContent = !PUSH.workerURL ? "Worker URL not added yet." : (pushed?"On — pings even when closed.":"Off — tap Enable."); }
+  { const mh=loadMoods().slice(-30); const lbl={depressive:"Low",baseline:"Steady",manic:"High"};
+    $("#setMoodHist").innerHTML = mh.length
+      ? '<div class="mood-dots">'+mh.map(x=>'<span class="mood-dot mood-'+x.m+'" title="'+esc(x.d)+': '+(lbl[x.m]||x.m)+'"></span>').join("")+'</div>'
+      : "No mood check-ins yet. Tapping the mood toggle (Low / Steady / High) logs the day."; }
 }
 $("#settingsBtn").onclick=()=>{ initQuietUI(); updateSettings(); $("#settings").classList.add("show"); };
 $("#pushBtn").onclick=enablePush;
@@ -1425,7 +1520,7 @@ $("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.d
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
 document.querySelectorAll("#modebar button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 document.querySelectorAll("#locToggle button").forEach(b=>b.onclick=()=>setLoc(b.dataset.l));
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); $("#settings").classList.remove("show"); $("#qnote").classList.remove("show"); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); $("#settings").classList.remove("show"); $("#qnote").classList.remove("show"); $("#bdump").classList.remove("show"); $("#worry").classList.remove("show"); } });
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkReminders(); syncPull(); } });
 (function(){ let ticking=false; const btn=$("#toTop");
   btn.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
