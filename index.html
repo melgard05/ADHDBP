@@ -232,7 +232,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 28</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 29</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -496,6 +496,13 @@
       <div class="set-sec">
         <div class="set-h">Background reminders (Phase 2)</div>
         <div class="set-row"><span id="setPush">…</span><button class="btn-ghost" id="pushBtn">&#128640; Enable</button></div>
+        <div class="set-row"><span>Send a test notification right now.</span><button class="btn-ghost" id="pushTestBtn">&#128276; Send test</button></div>
+        <div class="set-row"><label class="check-row" style="margin:0"><input type="checkbox" id="quietOn"> Quiet hours (no overnight buzzing)</label></div>
+        <div id="quietWrap" style="display:none">
+          <div class="set-row"><span>From</span><select id="quietStart"></select></div>
+          <div class="set-row"><span>Until</span><select id="quietEnd"></select></div>
+          <div class="set-note">Reminders that come due during quiet hours wait and ping you when quiet hours end — they're not skipped.</div>
+        </div>
         <div class="set-note">Get pinged even when the app is fully closed. Needs the one-time Cloudflare Worker setup.</div>
       </div>
       <div class="set-sec">
@@ -1076,6 +1083,36 @@ async function enablePush(){
   }catch(e){ toast("Couldn't enable — "+(e&&e.message?e.message:"unknown error")); }
   updateSettings();
 }
+async function ensurePushSub(){
+  try{ if(localStorage.getItem("td_push")!=="1") return; }catch(e){ return; }
+  if(!PUSH.workerURL || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  if(!("Notification" in window) || Notification.permission!=="granted") return;
+  try{ const reg=await navigator.serviceWorker.ready; let sub=await reg.pushManager.getSubscription();
+    if(!sub){ sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToUint8(PUSH.vapidPublic)}); }
+    await fetch(PUSH.workerURL.replace(/\/$/,"")+"/subscribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(sub)});
+  }catch(e){}
+}
+async function sendTestPush(){
+  if(!PUSH.workerURL){ toast("Add your Worker URL first."); return; }
+  try{ const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/test",{method:"POST"});
+    toast(r.ok?"Test sent — watch for a notification":"Couldn't reach the Worker"); }
+  catch(e){ toast("Couldn't reach the Worker"); } }
+function loadQuiet(){ let q={quiet:false,start:22,end:7}; try{ const r=localStorage.getItem("td_quiet"); if(r)q=JSON.parse(r); }catch(e){} return q; }
+function saveQuiet(){
+  const q={ quiet:$("#quietOn").checked, start:parseInt($("#quietStart").value), end:parseInt($("#quietEnd").value),
+            tz:(function(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone;}catch(e){return "UTC";}})() };
+  try{ localStorage.setItem("td_quiet",JSON.stringify(q)); }catch(e){}
+  $("#quietWrap").style.display=q.quiet?"block":"none";
+  if(PUSH.workerURL){ fetch(PUSH.workerURL.replace(/\/$/,"")+"/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(q)}).catch(()=>{}); }
+}
+function initQuietUI(){
+  const sH=$("#quietStart"), eH=$("#quietEnd"); if(sH && !sH.options.length){
+    let o=""; for(let i=0;i<24;i++){ const ap=i<12?"AM":"PM"; const h12=(i%12)||12; o+='<option value="'+i+'">'+h12+" "+ap+'</option>'; }
+    sH.innerHTML=o; eH.innerHTML=o;
+  }
+  const q=loadQuiet(); $("#quietOn").checked=q.quiet; $("#quietStart").value=q.start; $("#quietEnd").value=q.end;
+  $("#quietWrap").style.display=q.quiet?"block":"none";
+}
 
 /* ---- edit modal ---- */
 function dueDowText(v){ if(!v) return "";
@@ -1353,8 +1390,12 @@ function updateSettings(){
   { let pushed=false; try{ pushed=localStorage.getItem("td_push")==="1"; }catch(e){}
     $("#setPush").textContent = !PUSH.workerURL ? "Worker URL not added yet." : (pushed?"On — pings even when closed.":"Off — tap Enable."); }
 }
-$("#settingsBtn").onclick=()=>{ updateSettings(); $("#settings").classList.add("show"); };
+$("#settingsBtn").onclick=()=>{ initQuietUI(); updateSettings(); $("#settings").classList.add("show"); };
 $("#pushBtn").onclick=enablePush;
+$("#pushTestBtn").onclick=sendTestPush;
+$("#quietOn").onchange=saveQuiet;
+$("#quietStart").onchange=saveQuiet;
+$("#quietEnd").onchange=saveQuiet;
 $("#setClose").onclick=()=>$("#settings").classList.remove("show");
 $("#settings").onclick=e=>{ if(e.target.id==="settings") $("#settings").classList.remove("show"); };
 $("#syncNowBtn").onclick=()=>{ if(fbEnabled()){ syncState="saving"; syncNote(); updateSettings(); syncPull(); fbPushDebounced(); setTimeout(updateSettings,1200); } else toast("Sync isn't set up."); };
@@ -1407,7 +1448,7 @@ if(!live().length && persistent && !fbEnabled()){
 
 /* ---- boot ---- */
 document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l===locView));
-setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders();
+setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(); ensurePushSub();
 if("Notification" in window && Notification.permission==="granted") $("#notifyBtn").textContent="🔔 Reminders on";
 if(fbEnabled()){ syncPull(); setInterval(syncPull,15000); }
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
