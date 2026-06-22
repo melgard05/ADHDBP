@@ -239,7 +239,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 30</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 31</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -366,7 +366,7 @@
       </div>
       <div class="grid2">
         <div class="field"><label>Best time</label>
-          <select id="mWhen"><option value="">—</option><option value="wkday_morning">Weekday morning</option><option value="after_work">Weekday after work</option><option value="weekend">Weekend</option><option value="anytime">Anytime</option></select></div>
+          <select id="mWhen"><option value="">—</option><option value="wkday_morning">Weekday morning</option><option value="after_work">Weekday after work</option><option value="weekend">Weekend</option><option value="off_hours">Evenings &amp; weekends</option><option value="anytime">Anytime</option></select></div>
         <div class="field"><label>Horizon</label>
           <select id="mHorizon"><option value="">—</option><option value="now">Now</option><option value="next">Next</option><option value="later">Later</option></select></div>
       </div>
@@ -967,7 +967,7 @@ function card(t){
   if(t.estimate) tags.push('<span class="tag tag-est">~'+fmtMin(t.estimate)+'</span>');
   if(t.energy) tags.push('<span class="tag tag-energy">'+t.energy+' energy</span>');
   if(t.recur) tags.push('<span class="tag tag-recur">&#8635; '+recurLabel(t)+'</span>');
-  if(t.whenHint) tags.push('<span class="tag tag-when">'+({wkday_morning:"wkday AM",after_work:"after work",weekend:"weekend",anytime:"anytime"}[t.whenHint]||t.whenHint)+'</span>');
+  if(t.whenHint) tags.push('<span class="tag tag-when">'+({wkday_morning:"wkday AM",after_work:"after work",weekend:"weekend",off_hours:"eve/wknd",anytime:"anytime"}[t.whenHint]||t.whenHint)+'</span>');
   if(t.status==="waiting"){ const since=t.waitSince?" · "+daysSince(t.waitSince)+"d":"";
     tags.push('<span class="tag tag-wait">waiting'+(t.waitOn?": "+esc(t.waitOn):"")+since+'</span>'); }
   const last=t.log&&t.log.length?t.log[t.log.length-1]:null;
@@ -1055,6 +1055,7 @@ function scoreTask(t, ctx){ let s=0;
   // best-time match
   if(t.whenHint==="weekend" && ctx.weekend) s+=20;
   if(t.whenHint==="after_work" && ctx.afterWork) s+=20;
+  if(t.whenHint==="off_hours" && (ctx.afterWork || ctx.weekend)) s+=20;
   if(t.whenHint==="wkday_morning" && ctx.morning) s+=20;
   if(t.whenHint==="anytime") s+=5;
   // doing already = a little nudge to continue
