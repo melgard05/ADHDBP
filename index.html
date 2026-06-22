@@ -239,7 +239,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 37</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 38</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -542,6 +542,7 @@
           <input id="setWorkerUrl" placeholder="https://adhdbp-push.you.workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
         <div class="set-row"><span id="setPush">…</span><button class="btn-ghost" id="pushBtn">&#128640; Enable</button></div>
         <div class="set-row"><span>Send a test notification right now.</span><button class="btn-ghost" id="pushTestBtn">&#128276; Send test</button></div>
+        <div class="set-row"><span>Trouble? Re-register this device and show the result.</span><button class="btn-ghost" id="pushDiagBtn">&#128295; Diagnose</button></div>
         <div class="set-row"><label class="check-row" style="margin:0"><input type="checkbox" id="quietOn"> Quiet hours (no overnight buzzing)</label></div>
         <div id="quietWrap" style="display:none">
           <div class="set-row"><span>From</span><select id="quietStart"></select></div>
@@ -1516,6 +1517,29 @@ $("#setWorkerUrl").onchange=()=>{ const v=$("#setWorkerUrl").value.trim().replac
   try{ localStorage.setItem("td_workerurl",v); }catch(e){} updateSettings();
   if(v) toast("Worker URL saved"); };
 $("#pushTestBtn").onclick=sendTestPush;
+$("#pushDiagBtn").onclick=diagnosePush;
+async function diagnosePush(){
+  const out=[];
+  out.push("Permission: "+(("Notification" in window)?Notification.permission:"n/a"));
+  out.push("Service worker: "+(("serviceWorker" in navigator)?"yes":"no")+" · Push API: "+(("PushManager" in window)?"yes":"no"));
+  out.push("Worker URL: "+(PUSH.workerURL||"(none)"));
+  if(!PUSH.workerURL || !("serviceWorker" in navigator) || !("PushManager" in window)){ alert(out.join("\n")); return; }
+  try{
+    const perm=await Notification.requestPermission(); out.push("Permission now: "+perm);
+    if(perm!=="granted"){ alert(out.join("\n")); return; }
+    const reg=await navigator.serviceWorker.ready; out.push("Service worker: ready");
+    let sub=await reg.pushManager.getSubscription();
+    if(sub){ try{ await sub.unsubscribe(); out.push("Cleared old subscription"); }catch(e){} }
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToUint8(PUSH.vapidPublic)});
+    out.push("New subscription: created");
+    out.push("Push host: "+(new URL(sub.endpoint)).host);
+    const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/subscribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(sub)});
+    out.push("Saved to Worker: HTTP "+r.status+(r.ok?" ✓":" ✗"));
+    try{ localStorage.setItem("td_push", r.ok?"1":"0"); }catch(e){}
+    out.push(r.ok?"→ This device is registered. Now tap Send test.":"→ Couldn't save to Worker (network/firewall?).");
+  }catch(e){ out.push("ERROR: "+(e&&e.message?e.message:String(e))); }
+  alert(out.join("\n")); updateSettings();
+}
 $("#quietOn").onchange=saveQuiet;
 $("#quietStart").onchange=saveQuiet;
 $("#quietEnd").onchange=saveQuiet;
