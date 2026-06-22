@@ -159,6 +159,8 @@
   .mood-dot{width:13px;height:13px;border-radius:50%}
   .mood-depressive{background:#60A5FA}.mood-baseline{background:#34D399}.mood-manic{background:#FBBF24}
   .streak-badge{font-size:13px;font-weight:700;color:#C2410C;background:#FFEDD5;border-radius:8px;padding:4px 10px;display:inline-block}
+  .sheet-h-sticky{position:sticky;top:0;background:var(--card);z-index:5;margin:0;padding:16px 20px 10px;border-bottom:1px solid var(--line)}
+  .sheet-x{position:absolute;top:12px;right:14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font-size:16px;line-height:1;cursor:pointer;color:var(--ink)}
   .set-sec{padding:12px 0;border-bottom:1px solid var(--line)}
   .set-sec:last-child{border-bottom:0}
   .set-h{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
@@ -239,7 +241,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 40</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 41</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -524,7 +526,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3>Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 40</span></small></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 41</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -1515,6 +1517,7 @@ function updateSettings(){
 }
 $("#settingsBtn").onclick=()=>{ initQuietUI(); updateSettings(); $("#settings").classList.add("show"); };
 $("#pushBtn").onclick=enablePush;
+$("#setX").onclick=()=>$("#settings").classList.remove("show");
 $("#setWorkerUrl").onchange=()=>{ const v=$("#setWorkerUrl").value.trim().replace(/\/$/,""); PUSH.workerURL=v;
   try{ localStorage.setItem("td_workerurl",v); }catch(e){} updateSettings();
   if(v) toast("Worker URL saved"); };
@@ -1601,7 +1604,20 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 40"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 41"; if(b2) b2.textContent=v; }
+function anyOverlayOpen(){
+  const sels=["#modal","#chase","#tpl","#complete","#recap","#settings","#qnote","#bdump","#worry","#focus"];
+  return sels.some(s=>{ const el=$(s); return el && el.classList.contains("show"); });
+}
+function closeTopOverlay(){
+  if(typeof closeModal==="function" && $("#modal") && $("#modal").classList.contains("show")){ closeModal(); return true; }
+  const order=["#qnote","#bdump","#worry","#complete","#chase","#tpl","#recap","#settings"];
+  for(const s of order){ const el=$(s); if(el && el.classList.contains("show")){ el.classList.remove("show"); return true; } }
+  if($("#focus") && $("#focus").classList.contains("show")){ if(typeof closeFocus==="function") closeFocus(); else $("#focus").classList.remove("show"); return true; }
+  return false;
+}
+history.pushState(null,"");
+window.addEventListener("popstate",()=>{ if(anyOverlayOpen()){ closeTopOverlay(); history.pushState(null,""); } });
 if("Notification" in window && Notification.permission==="granted") $("#notifyBtn").textContent="🔔 Reminders on";
 if(fbEnabled()){ syncPull(); setInterval(syncPull,15000); }
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
