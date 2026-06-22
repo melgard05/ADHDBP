@@ -239,7 +239,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 31</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 34</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -342,7 +342,7 @@
         <div class="field"><label>Category</label><input id="mCat" list="catList" placeholder="e.g. Steve's, Cards, Home"><datalist id="catList"></datalist></div>
         <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div><a id="mGcal" class="gcal-link" href="#" target="_blank" rel="noopener" style="display:none">📅 Add to Google Calendar</a></div>
       </div>
-      <div class="field"><label>Deadline — must finish by</label><input id="mDeadline" type="date"><div id="mDeadlineDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div></div>
+      <div class="field"><label>Deadline — must finish by</label><input id="mDeadline" type="datetime-local"><div id="mDeadlineDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div></div>
       <div class="field"><label>Priority</label>
         <div class="seg" id="mPr"><button data-v="high">High</button><button data-v="medium">Medium</button><button data-v="low">Low</button></div>
       </div>
@@ -404,6 +404,9 @@
         <div class="field"><label>Weekday</label>
           <select id="mRecurDow"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></div>
       </div>
+      <div class="field"><label>Part of (tuck this under a base task)</label>
+        <select id="mParent"><option value="">— On its own (top-level)</option></select>
+        <div class="set-note">Pick a base task to make this a sub-task under it.</div></div>
       <div class="field"><label>Sub-tasks</label>
         <div id="mSubs" style="display:flex;flex-direction:column;gap:6px"></div>
         <div style="display:flex;gap:8px;margin-top:8px"><input id="mSubAdd" placeholder="Add a sub-task / next thing…" style="flex:1"><button type="button" id="mSubAddBtn" class="btn-ghost">+ Add</button></div>
@@ -663,17 +666,23 @@ function localDT(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.ge
 function chaseDate(days,hour){ const d=new Date(); d.setDate(d.getDate()+days); d.setHours(hour||9,0,0,0); return localDT(d); }
 function fmtDue(iso){ if(!iso)return"";
   const d=new Date(iso),n=new Date(); const same=d.toDateString()===n.toDateString();
-  return d.toLocaleString(undefined, same?{hour:"numeric",minute:"2-digit"}:{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); }
+  const tm=d.toLocaleString(undefined,{hour:"numeric",minute:"2-digit"});
+  if(same) return "Today, "+tm;
+  return d.toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric"})+", "+tm; }
 function daysSince(iso){ if(!iso)return null; return Math.floor((now()-new Date(iso).getTime())/86400000); }
-function daysUntil(dateStr){ if(!dateStr) return null; const d=new Date(dateStr+"T00:00:00"); if(isNaN(d)) return null;
+function dlDate(v){ if(!v) return null; const d=new Date(v.length<=10? v+"T00:00:00" : v); return isNaN(d)?null:d; }
+function dlHasTime(v){ return !!v && v.length>10 && v.slice(11,16)!=="00:00"; }
+function dlTimeStr(v){ const d=dlDate(v); return (d&&dlHasTime(v))? d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}) : ""; }
+function daysUntil(dateStr){ const d=dlDate(dateStr); if(!d) return null; d.setHours(0,0,0,0);
   const t=new Date(); t.setHours(0,0,0,0); return Math.round((d.getTime()-t.getTime())/86400000); }
 function deadlineTag(t){ const n=daysUntil(t.deadline); if(n===null) return null;
-  const d=new Date(t.deadline+"T00:00:00"); const nice=d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  const d=dlDate(t.deadline); const tm=dlTimeStr(t.deadline);
+  const nice=d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+(tm?" "+tm:"");
   let txt, cls;
   if(n<0){ txt="⛳ "+(-n)+"d overdue"; cls="dl-over"; }
-  else if(n===0){ txt="⛳ DUE TODAY"; cls="dl-over"; }
-  else if(n===1){ txt="⛳ due tomorrow"; cls="dl-soon"; }
-  else if(n<=3){ txt="⛳ "+n+" days left"; cls="dl-soon"; }
+  else if(n===0){ txt="⛳ DUE TODAY"+(tm?" "+tm:""); cls="dl-over"; }
+  else if(n===1){ txt="⛳ due tomorrow"+(tm?" "+tm:""); cls="dl-soon"; }
+  else if(n<=3){ txt="⛳ "+n+" days left"+(tm?" · "+tm:""); cls="dl-soon"; }
   else if(n<=7){ txt="⛳ due "+nice+" ("+n+"d)"; cls="dl-near"; }
   else { txt="⛳ due "+nice; cls="dl-far"; }
   return '<span class="tag tag-dl '+cls+'">'+txt+'</span>'; }
@@ -1201,19 +1210,27 @@ function renderSubs(pid){ const box=$("#mSubs"); const kids=live().filter(x=>x.p
     box.appendChild(row); }); }
 function refreshDeadlineDow(){ const v=$("#mDeadline").value; const el=$("#mDeadlineDow");
   if(!v){ el.textContent=""; return; }
-  const n=daysUntil(v); const d=new Date(v+"T00:00:00");
+  const n=daysUntil(v); const d=dlDate(v); if(!d){ el.textContent=""; return; }
   const wd=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];
-  let s=wd; if(n<0) s+=" · "+(-n)+" days ago"; else if(n===0) s+=" · today"; else if(n===1) s+=" · tomorrow"; else s+=" · in "+n+" days";
+  const tm=dlTimeStr(v); let s=wd+(tm?" at "+tm:"");
+  if(n<0) s+=" · "+(-n)+" days ago"; else if(n===0) s+=" · today"; else if(n===1) s+=" · tomorrow"; else s+=" · in "+n+" days";
   el.textContent=s; el.style.color=(n!=null&&n<=1)?"var(--hi)":"var(--muted)"; }
 let editId=null;
 function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return;
   $("#mName").value=t.title; $("#mNotes").value=t.notes||"";
-  $("#mCat").value=t.category||""; $("#mDue").value=t.due||""; $("#mDeadline").value=t.deadline||"";
+  $("#mCat").value=t.category||""; $("#mDue").value=t.due||""; $("#mDeadline").value=(t.deadline&&t.deadline.length<=10)?(t.deadline+"T00:00"):(t.deadline||"");
   setEstSelects(t.estimate||0);
   $("#mEnergy").value=t.energy||"";
   $("#mHorizon").value=t.horizon||""; $("#mRecur").value=t.recur||"";
   $("#mRecurOrd").value=(t.recurOrd==null?1:t.recurOrd); $("#mRecurDow").value=(t.recurDow==null?1:t.recurDow);
   $("#mWhen").value=t.whenHint||"";
+  { const sel=$("#mParent");
+    const desc=new Set(); (function collect(pid){ live().filter(x=>x.parentId===pid).forEach(c=>{ desc.add(c.id); collect(c.id); }); })(id);
+    const cands=live().filter(x=>x.id!==id && !desc.has(x.id) && (!x.parentId || x.id===t.parentId))
+      .sort((a,b)=>a.title.localeCompare(b.title));
+    const opts=['<option value="">— On its own (top-level)</option>'];
+    cands.forEach(x=>opts.push('<option value="'+x.id+'">'+esc(x.title.length>50?x.title.slice(0,50)+"…":x.title)+(x.parentId?" (sub)":"")+'</option>'));
+    sel.innerHTML=opts.join(""); sel.value=t.parentId||""; }
   $("#mWaitOn").value=t.waitOn||""; $("#mWaitSince").value=t.waitSince||"";
   { const ls=taskLocs(t); const presets=["work","home","cabin","newhouse"];
     document.querySelectorAll(".mLocBox").forEach(b=>b.checked=ls.includes(b.value));
@@ -1259,6 +1276,9 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.horizon=$("#mHorizon").value; t.recur=$("#mRecur").value;
   t.recurOrd=parseInt($("#mRecurOrd").value); t.recurDow=parseInt($("#mRecurDow").value);
   t.whenHint=$("#mWhen").value;
+  { const np=$("#mParent").value;
+    const desc=new Set(); (function collect(pid){ live().filter(x=>x.parentId===pid).forEach(c=>{ desc.add(c.id); collect(c.id); }); })(t.id);
+    t.parentId=(np && np!==t.id && !desc.has(np))?np:""; }
   { const arr=[]; document.querySelectorAll(".mLocBox").forEach(b=>{ if(b.checked)arr.push(b.value); });
     const other=$("#mLocOtherText").value.trim(); if(other)arr.push(other);
     t.locs=arr; t.loc=arr[0]||""; }
