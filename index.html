@@ -239,7 +239,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 38</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 39</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -1172,8 +1172,10 @@ async function ensurePushSub(){
 async function sendTestPush(){
   if(!PUSH.workerURL){ toast("Add your Worker URL first."); return; }
   try{ const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/test",{method:"POST"});
-    toast(r.ok?"Test sent — watch for a notification":"Couldn't reach the Worker"); }
-  catch(e){ toast("Couldn't reach the Worker"); } }
+    let info="";
+    try{ const j=await r.json(); info="\n\nDevices the Worker pushed to:\n"+(j.results||[]).map(x=>"• "+x.host+" → "+x.status+(x.status===201?" (accepted ✓)":x.status===0?" (send failed)":"")).join("\n")+(j.sent?"":"\n(none registered)"); }catch(e){}
+    alert((r.ok?"Test sent.":"Couldn't reach the Worker.")+info+"\n\nIf a device shows 201 but no notification appears there, the phone is accepting but not displaying it (Android setting)."); }
+  catch(e){ alert("Couldn't reach the Worker — "+(e&&e.message?e.message:"network error")); } }
 function loadQuiet(){ let q={quiet:false,start:22,end:7}; try{ const r=localStorage.getItem("td_quiet"); if(r)q=JSON.parse(r); }catch(e){} return q; }
 function saveQuiet(){
   const q={ quiet:$("#quietOn").checked, start:parseInt($("#quietStart").value), end:parseInt($("#quietEnd").value),
