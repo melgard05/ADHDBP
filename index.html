@@ -88,7 +88,12 @@
   .loc-toggle button.sel{background:var(--loc);border-color:var(--loc);color:#fff}
   .chip{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);
     font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
-  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink);box-shadow:0 0 0 2px rgba(0,0,0,.08)}
+  .loc-toggle button.sel{box-shadow:0 0 0 2px rgba(0,0,0,.10)}
+  .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:10px 14px;
+    background:#FFF4E5;border:1px solid #FFD9A0;border-left:4px solid #F59E0B;border-radius:10px;font-size:13.5px;color:#7A4A00}
+  .filter-bar b{color:#7A4A00}
+  .filter-bar .fb-clear{margin-left:auto;background:#F59E0B;border:none;color:#fff;font-weight:700;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px}
   .spacer{flex:1}
   .board{display:grid;grid-template-columns:1fr;gap:18px;margin-top:18px}
   .lane-nav{display:flex;gap:8px;background:var(--bg);padding:4px 0;margin-top:6px}
@@ -241,7 +246,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 42</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 43</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -276,6 +281,7 @@
     <div class="mb-help" id="mbHelp"></div>
 
     <div class="alerts" id="alerts"></div>
+    <div id="filterBar" class="filter-bar" style="display:none"></div>
     <div class="suggest" id="suggest"></div>
 
     <div class="filters">
@@ -526,7 +532,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 42</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 43</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -565,6 +571,12 @@
             <select id="smsGrace"><option value="5">5 minutes</option><option value="10" selected>10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></div>
           <div class="set-note">A text goes out only if the task is still due and you haven't touched it after the wait. Acting on it in the app (snooze, progress, done) cancels the text.</div>
         </div>
+      </div>
+      <div class="set-sec">
+        <div class="set-h">Filters</div>
+        <div class="set-row"><span>Forget my filters after I've been away</span>
+          <select id="filterReset"><option value="0">Hold them</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">1 hour</option></select></div>
+        <div class="set-note">If a location or view filter is left on, it clears itself after this long away — so you don't lose track of tasks behind a forgotten filter. A banner always shows when a filter is active.</div>
       </div>
       <div class="set-sec">
         <div class="set-h">Mood history</div>
@@ -921,6 +933,7 @@ function render(){
   { const fc=focusCount(); const tc=$("#todayChip"); if(tc) tc.textContent="⭐ Today"+(fc?" ("+fc+")":"");
     const ic=live().filter(t=>t.inbox&&t.status!=="done").length; const ie=$("#inboxChip"); if(ie) ie.textContent="🧠 Inbox"+(ic?" ("+ic+")":""); }
   $("#doneChip").textContent="✓ "+doneToday()+" today";
+  renderFilterBar();
   const list=visible();
   const lanes=[
     {key:"active",label:"To do & in progress",cls:"",match:t=>t.status==="todo"||t.status==="doing"},
@@ -1132,6 +1145,51 @@ function setMode(m){ mode=m; try{localStorage.setItem(MKEY,m);}catch(e){} logMoo
   resetTimer(); render(); }
 function setLoc(l){ locView=l; try{localStorage.setItem(LKEY,l);}catch(e){}
   document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l===l)); render(); }
+function activeFilters(){
+  const f=[]; const locName={work:"📍 Work",home:"🏠 Home",cabin:"🌲 Cabin",newhouse:"🏡 New House"};
+  if(locView!=="all") f.push(locName[locView]||locView);
+  const vn={today:"⭐ Today",inbox:"🧠 Inbox",now:"Now",next:"Next",later:"Later"};
+  if(view!=="all" && vn[view]) f.push(vn[view]);
+  const cf=$("#catFilter"); if(cf && cf.value) f.push("#"+cf.value);
+  const pf=$("#prFilter"); if(pf && pf.value) f.push(pf.value+" priority");
+  if($("#anxFilter") && $("#anxFilter").checked) f.push("anxious");
+  if($("#promisedFilter") && $("#promisedFilter").checked) f.push("promised");
+  const s=$("#search"); if(s && s.value.trim()) f.push('"'+s.value.trim()+'"');
+  return f;
+}
+function renderFilterBar(){
+  const bar=$("#filterBar"); if(!bar) return;
+  const f=activeFilters();
+  if(!f.length){ bar.style.display="none"; bar.innerHTML=""; return; }
+  const hidden=live().length - visible().length;
+  bar.style.display="flex";
+  bar.innerHTML='<span>&#128269; Showing only: <b>'+f.map(esc).join("</b> · <b>")+'</b>'+(hidden>0?' — '+hidden+' task'+(hidden>1?'s':'')+' hidden':'')+'</span>'+
+    '<button class="fb-clear" id="fbClear">Clear filters</button>';
+  $("#fbClear").onclick=clearAllFilters;
+}
+function clearAllFilters(){
+  locView="all"; try{localStorage.setItem(LKEY,"all");}catch(e){}
+  document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l==="all"));
+  view="all"; document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("active",x.dataset.view==="all"));
+  const cf=$("#catFilter"); if(cf) cf.value="";
+  const pf=$("#prFilter"); if(pf) pf.value="";
+  if($("#anxFilter")) $("#anxFilter").checked=false;
+  if($("#promisedFilter")) $("#promisedFilter").checked=false;
+  const s=$("#search"); if(s){ s.value=""; const sc=$("#searchClear"); if(sc) sc.style.display="none"; }
+  render();
+}
+/* auto-reset filters after a stretch of inactivity, so a forgotten filter clears itself */
+function loadFilterReset(){ try{ return parseInt(localStorage.getItem("td_filterreset")); }catch(e){ return NaN; } }
+function markActivity(){ try{ localStorage.setItem("td_lastactive", String(Date.now())); }catch(e){} }
+function maybeResetFilters(){
+  let mins=loadFilterReset(); if(isNaN(mins)) mins=30;   // default 30 min
+  if(!mins) return;                                       // 0 = hold forever
+  let last=0; try{ last=parseInt(localStorage.getItem("td_lastactive"))||0; }catch(e){}
+  if(last && (Date.now()-last) > mins*60000 && activeFilters().length){ clearAllFilters(); }
+}
+["pointerdown","keydown"].forEach(ev=>document.addEventListener(ev, markActivity, {passive:true}));
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"){ maybeResetFilters(); markActivity(); } });
+window.addEventListener("focus", maybeResetFilters);
 
 /* ---- reminders ---- */
 function notify(title, body, tag){
@@ -1581,6 +1639,8 @@ $("#smsOn").onchange=saveSms;
 $("#smsWebhook").onchange=saveSms;
 $("#smsPhone").onchange=saveSms;
 $("#smsGrace").onchange=saveSms;
+{ const fr=$("#filterReset"); if(fr){ let v=loadFilterReset(); if(isNaN(v)) v=30; fr.value=String(v);
+  fr.onchange=()=>{ try{ localStorage.setItem("td_filterreset", fr.value); }catch(e){} }; } }
 $("#setClose").onclick=()=>$("#settings").classList.remove("show");
 $("#settings").onclick=e=>{ if(e.target.id==="settings") $("#settings").classList.remove("show"); };
 $("#syncNowBtn").onclick=()=>{ if(fbEnabled()){ syncState="saving"; syncNote(); updateSettings(); syncPull(); fbPushDebounced(); setTimeout(updateSettings,1200); } else toast("Sync isn't set up."); };
@@ -1633,11 +1693,11 @@ if(!live().length && persistent && !fbEnabled()){
 
 /* ---- boot ---- */
 document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l===locView));
-setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(); ensurePushSub();
+setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(); ensurePushSub(); maybeResetFilters(); markActivity();
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 42"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 43"; if(b2) b2.textContent=v; }
 function anyOverlayOpen(){
   const sels=["#modal","#chase","#tpl","#complete","#recap","#settings","#qnote","#bdump","#worry","#focus"];
   return sels.some(s=>{ const el=$(s); return el && el.classList.contains("show"); });
