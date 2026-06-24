@@ -246,7 +246,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 43</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 45</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -532,7 +532,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 43</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 45</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -796,6 +796,7 @@ async function copyText(s){ try{ await navigator.clipboard.writeText(s); }
   catch(e){ const ta=document.createElement("textarea"); ta.value=s; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(_){} ta.remove(); } }
 
 let view="all";
+let justAddedId=null;
 
 /* ---- quick add ---- */
 const DOW={sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6,sun:0,mon:1,tue:2,tues:2,wed:3,wednes:3,thu:4,thur:4,thurs:4,fri:5,sat:6};
@@ -845,7 +846,7 @@ function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
   const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,locs:p.loc?[p.loc]:[],helpFor:p.helpFor,due:p.due});
-  tasks.unshift(t); $("#quickAdd").value=""; save(); render(); window.scrollTo({top:0,behavior:"smooth"}); openEdit(t.id);
+  tasks.unshift(t); justAddedId=t.id; $("#quickAdd").value=""; save(); render(); window.scrollTo({top:0,behavior:"smooth"}); openEdit(t.id);
   if(mode==="manic"){ manicAdds++; if(manicAdds===6){ toast("That's a lot of new things on a high-energy day — be kind to future-you. 💜"); } } }
 
 /* ---- recurring ---- */
@@ -916,6 +917,7 @@ function byDateField(a,b,f){ const av=a[f], bv=b[f];
   if(av&&bv) return new Date(av)-new Date(bv);
   if(av) return -1; if(bv) return 1; return byPriorityThenDue(a,b); }
 function activeSort(a,b){
+  if((a.id===justAddedId)!==(b.id===justAddedId)) return a.id===justAddedId?-1:1;
   if(isSnoozed(a)!==isSnoozed(b)) return isSnoozed(a)?1:-1;
   if(isFocusToday(a)!==isFocusToday(b)) return isFocusToday(a)?-1:1;
   const sb=(typeof $==="function" && $("#sortBy")) ? $("#sortBy").value : "smart";
@@ -1294,15 +1296,17 @@ function refreshDueDow(){ const r=dueDowText($("#mDue").value); const el=$("#mDu
   if(due){ g.href=gcalUrl({title:$("#mName").value,due:due,notes:$("#mNotes").value,estimate:curEstMin()}); g.style.display="inline-block"; }
   else g.style.display="none"; }
 function refreshNthWrap(){ $("#nthWrap").style.display=$("#mRecur").value==="monthly_nth"?"grid":"none"; }
-function renderSubs(pid){ const box=$("#mSubs"); const kids=live().filter(x=>x.parentId===pid);
-  if(!kids.length){ box.innerHTML='<div class="set-note">No sub-tasks yet — break this into smaller steps below.</div>'; return; }
+function renderSubs(pid){ const box=$("#mSubs"); const all=live().filter(x=>x.parentId===pid);
+  const kids=all.filter(x=>x.status!=="done"); const doneN=all.length-kids.length;
+  if(!all.length){ box.innerHTML='<div class="set-note">No sub-tasks yet — break this into smaller steps below.</div>'; return; }
   box.innerHTML="";
   kids.forEach(k=>{ const row=document.createElement("div"); row.className="sub-row";
-    const done=k.status==="done";
-    row.innerHTML='<input type="checkbox" '+(done?"checked":"")+'><span style="'+(done?"text-decoration:line-through;color:var(--muted)":"")+'">'+esc(k.title)+'</span><button type="button" class="btn-ghost" style="padding:2px 8px;font-size:12px">open</button>';
-    row.querySelector("input").onchange=e=>{ if(e.target.checked){ k.status="done"; k.completedAt=now(); } else { k.status="todo"; k.completedAt=null; } touch(k); save(); renderSubs(pid); };
+    row.innerHTML='<input type="checkbox"><span>'+esc(k.title)+'</span><button type="button" class="btn-ghost" style="padding:2px 8px;font-size:12px">open</button>';
+    row.querySelector("input").onchange=e=>{ if(e.target.checked){ k.status="done"; k.completedAt=now(); touch(k); save(); renderSubs(pid); render(); } };
     row.querySelector("button").onclick=()=>openEdit(k.id);
-    box.appendChild(row); }); }
+    box.appendChild(row); });
+  if(!kids.length){ const e=document.createElement("div"); e.className="set-note"; e.textContent="All sub-tasks done ✓"; box.appendChild(e); }
+  if(doneN){ const n=document.createElement("div"); n.className="set-note"; n.style.marginTop="6px"; n.textContent="✓ "+doneN+" completed (hidden — find them in the Done lane)"; box.appendChild(n); } }
 function refreshDeadlineDow(){ const v=$("#mDeadline").value; const el=$("#mDeadlineDow");
   if(!v){ el.textContent=""; return; }
   const n=daysUntil(v); const d=dlDate(v); if(!d){ el.textContent=""; return; }
@@ -1697,7 +1701,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 43"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 45"; if(b2) b2.textContent=v; }
 function anyOverlayOpen(){
   const sels=["#modal","#chase","#tpl","#complete","#recap","#settings","#qnote","#bdump","#worry","#focus"];
   return sels.some(s=>{ const el=$(s); return el && el.classList.contains("show"); });
