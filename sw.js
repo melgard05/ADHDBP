@@ -68,7 +68,10 @@ self.addEventListener("push", e => {
       const d = await r.json();
       const tasks = Array.isArray(d) ? d : (d ? Object.values(d) : []);
       const now = Date.now();
-      const due = tasks.filter(t => t && !t.deleted && t.status !== "done" && t.dueMs && t.dueMs <= now);
+      const due = tasks.filter(t => t && !t.deleted && t.status !== "done" && (
+        (t.dueMs && t.dueMs <= now) ||
+        (Array.isArray(t.remindMs) && t.remindMs.some(ms => ms <= now))
+      ));
       if (!due.length) {
         return self.registration.showNotification("ADHDBP Control Panel", { body: "Checked your reminders — nothing due right now.", tag: "td-check", icon: "icon-192.png", badge: "icon-192.png" });
       }

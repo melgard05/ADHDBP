@@ -94,6 +94,14 @@
     background:#FFF4E5;border:1px solid #FFD9A0;border-left:4px solid #F59E0B;border-radius:10px;font-size:13.5px;color:#7A4A00}
   .filter-bar b{color:#7A4A00}
   .filter-bar .fb-clear{margin-left:auto;background:#F59E0B;border:none;color:#fff;font-weight:700;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px}
+  .update-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:10px 14px;
+    background:#E7F0FF;border:1px solid #B6D0FF;border-left:4px solid var(--accent);border-radius:10px;font-size:13.5px;color:#1E3A8A}
+  .update-bar .ub-go{margin-left:auto;background:var(--accent);border:none;color:#fff;font-weight:700;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px}
+  .update-bar .ub-x{background:transparent;border:none;color:#1E3A8A;cursor:pointer;font-size:16px;padding:2px 6px}
+  .dow-hint{font-size:13px;font-weight:700;margin-top:4px;min-height:16px;color:var(--accent)}
+  .dlrem-row{display:flex;flex-wrap:wrap;gap:6px}
+  .dlrem-row label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 10px;cursor:pointer}
+  .dlrem-row input{margin:0}
   .spacer{flex:1}
   .board{display:grid;grid-template-columns:1fr;gap:18px;margin-top:18px}
   .lane-nav{display:flex;gap:8px;background:var(--bg);padding:4px 0;margin-top:6px}
@@ -155,7 +163,7 @@
   .focus-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .timer{font-size:42px;font-weight:800;letter-spacing:-.02em;margin:8px 0;font-variant-numeric:tabular-nums}
   .timer-row{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
-  #modal,#chase,#tpl,#complete,#recap,#settings,#qnote,#bdump,#worry{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;place-items:center;padding:20px;overflow:auto}
+  #modal,#chase,#tpl,#complete,#recap,#settings,#qnote,#bdump,#worry{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;align-items:flex-start;justify-items:center;padding:20px;overflow:auto}
   #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show,#qnote.show,#bdump.show,#worry.show{display:grid}
   .cap-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .cap-tools button{font-size:12.5px;padding:6px 12px}
@@ -246,7 +254,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 45</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 47</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -280,6 +288,7 @@
     </div>
     <div class="mb-help" id="mbHelp"></div>
 
+    <div id="updateBar" class="update-bar" style="display:none"></div>
     <div class="alerts" id="alerts"></div>
     <div id="filterBar" class="filter-bar" style="display:none"></div>
     <div class="suggest" id="suggest"></div>
@@ -348,9 +357,17 @@
       <div class="field"><label>Promised to help (who)</label><input id="mHelp" placeholder="Person you committed to (optional)"></div>
       <div class="grid2">
         <div class="field"><label>Category</label><input id="mCat" list="catList" placeholder="e.g. Steve's, Cards, Home"><datalist id="catList"></datalist></div>
-        <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div><a id="mGcal" class="gcal-link" href="#" target="_blank" rel="noopener" style="display:none">📅 Add to Google Calendar</a></div>
+        <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDow" class="dow-hint"></div><a id="mGcal" class="gcal-link" href="#" target="_blank" rel="noopener" style="display:none">📅 Add to Google Calendar</a></div>
       </div>
-      <div class="field"><label>Deadline — must finish by</label><input id="mDeadline" type="datetime-local"><div id="mDeadlineDow" style="font-size:11.5px;font-weight:700;margin-top:2px;min-height:14px"></div></div>
+      <div class="field"><label>Deadline — must finish by</label><input id="mDeadline" type="datetime-local"><div id="mDeadlineDow" class="dow-hint"></div>
+        <div style="margin-top:8px"><label style="font-size:12.5px;color:var(--muted);display:block;margin-bottom:4px">Remind me before the deadline:</label>
+          <div class="dlrem-row">
+            <label><input type="checkbox" class="dlRemBox" value="10080"> 1 wk</label>
+            <label><input type="checkbox" class="dlRemBox" value="4320"> 3 days</label>
+            <label><input type="checkbox" class="dlRemBox" value="1440"> 1 day</label>
+            <label><input type="checkbox" class="dlRemBox" value="240"> 4 hrs</label>
+            <label><input type="checkbox" class="dlRemBox" value="60"> 1 hr</label>
+          </div></div></div>
       <div class="field"><label>Priority</label>
         <div class="seg" id="mPr"><button data-v="high">High</button><button data-v="medium">Medium</button><button data-v="low">Low</button></div>
       </div>
@@ -532,7 +549,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 45</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 47</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -649,7 +666,9 @@ function load(){ try{ const r=localStorage.getItem(KEY); return r?JSON.parse(r):
   catch(e){ persistent=false; return memCache||[]; } }
 function saveLocal(){ try{ localStorage.setItem(KEY,JSON.stringify(tasks)); }
   catch(e){ persistent=false; memCache=tasks; } }
-function normalizeDueMs(){ tasks.forEach(t=>{ const d=t.due?new Date(t.due):null; t.dueMs=(d&&!isNaN(d))?d.getTime():0; }); }
+function normalizeDueMs(){ tasks.forEach(t=>{ const d=t.due?new Date(t.due):null; t.dueMs=(d&&!isNaN(d))?d.getTime():0;
+  const dl=dlDate(t.deadline); const off=Array.isArray(t.dlReminds)?t.dlReminds:[];
+  t.remindMs = (dl && off.length) ? off.map(m=>dl.getTime()-m*60000).filter(x=>x>0) : []; }); }
 function save(){ normalizeDueMs(); saveLocal(); fbPushDebounced(); }
 let tasks=load();
 let mode="baseline"; try{ mode=localStorage.getItem(MKEY)||"baseline"; }catch(e){}
@@ -842,7 +861,7 @@ function parseQuick(raw){
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",recurOrd:1,recurDow:1,whenHint:"",waitOn:"",waitSince:"",
-  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,deadline:"",parentId:"",inbox:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,deadline:"",dlReminds:[],remindMs:[],remindedMs:[],parentId:"",inbox:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
   const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,locs:p.loc?[p.loc]:[],helpFor:p.helpFor,due:p.due});
@@ -1204,10 +1223,20 @@ function notify(title, body, tag){
 }
 function checkReminders(){
   if(!("Notification" in window)||Notification.permission!=="granted"){ renderAlerts(); return; }
-  live().forEach(t=>{ if(t.status==="done"||t.reminded||!t.due)return;
-    if(new Date(t.due).getTime()<=now()){
+  live().forEach(t=>{
+    if(t.status==="done") return;
+    if(!t.reminded && t.due && new Date(t.due).getTime()<=now()){
       notify(t.status==="waiting"?"Time to follow up":"Reminder", t.title, t.id);
-      t.reminded=true; touch(t); save(); } });
+      t.reminded=true; touch(t); save();
+    }
+    if(Array.isArray(t.remindMs) && t.remindMs.length){
+      const fired=Array.isArray(t.remindedMs)?t.remindedMs:[];
+      t.remindMs.forEach(ms=>{ if(ms<=now() && !fired.includes(ms)){
+        notify("Deadline coming up", t.title, t.id+"_"+ms);
+        fired.push(ms); t.remindedMs=fired; touch(t); save();
+      }});
+    }
+  });
   renderAlerts(); }
 setInterval(checkReminders,30000);
 async function enableReminders(){
@@ -1339,6 +1368,7 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   setSeg("#mPr",t.priority); setSeg("#mStatus",t.status);
   $("#waitWrap").style.display=t.status==="waiting"?"grid":"none";
   refreshDueDow(); refreshDeadlineDow(); refreshNthWrap(); renderSubs(id);
+  { const offs=Array.isArray(t.dlReminds)?t.dlReminds.map(Number):[]; document.querySelectorAll(".dlRemBox").forEach(b=>b.checked=offs.includes(parseInt(b.value))); }
   { const sp=$("#estSpent"); const sec=t.timeSpentSec||0;
     if(sec>=60){ sp.style.display="block"; sp.innerHTML="⏱ Focus time logged so far: <b>"+fmtMin(Math.round(sec/60))+"</b>"+((parseInt(t.estimate)||0)?(" of ~"+fmtMin(t.estimate)+" estimated"):""); }
     else { sp.style.display="none"; sp.innerHTML=""; } }
@@ -1352,7 +1382,7 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
       if(e.resume) s+=' · pick up: '+esc(e.resume);
       return '<div>'+s+' → '+e.next+'</div>'; }).join(""); }
   else $("#mLogWrap").style.display="none";
-  refreshCats(); $("#modal").classList.add("show"); }
+  refreshCats(); $("#modal").classList.add("show"); $("#modal").scrollTop=0; }
 $("#mDue").addEventListener("change",refreshDueDow);
 $("#mDue").addEventListener("input",refreshDueDow);
 $("#mDeadline").addEventListener("change",refreshDeadlineDow);
@@ -1371,6 +1401,7 @@ document.querySelectorAll("#mStatus button").forEach(b=>b.onclick=()=>{ setSeg("
 $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.title=$("#mName").value.trim()||t.title; t.notes=$("#mNotes").value.trim();
   t.category=$("#mCat").value.trim(); t.due=$("#mDue").value; t.deadline=$("#mDeadline").value; t.inbox=false;
+  { const offs=[]; document.querySelectorAll(".dlRemBox").forEach(b=>{ if(b.checked) offs.push(parseInt(b.value)); }); t.dlReminds=offs; t.remindedMs=[]; }
   { const tot=curEstMin(); t.estimate=tot?String(tot):""; } t.energy=$("#mEnergy").value;
   t.horizon=$("#mHorizon").value; t.recur=$("#mRecur").value;
   t.recurOrd=parseInt($("#mRecurOrd").value); t.recurDow=parseInt($("#mRecurDow").value);
@@ -1701,7 +1732,35 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 45"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 47"; if(b2) b2.textContent=v; }
+/* ---- "new build available" check ---- */
+const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
+let updateDismissed=0;
+async function checkForUpdate(){
+  try{
+    const r=await fetch("./index.html?cb="+Date.now(), {cache:"no-store"});
+    if(!r.ok) return;
+    const txt=await r.text();
+    const m=txt.match(/id="buildBadge"[^>]*>build\s*(\d+)/);
+    if(!m) return;
+    const latest=parseInt(m[1]);
+    const bar=$("#updateBar"); if(!bar) return;
+    if(latest>APP_BUILD && latest!==updateDismissed){
+      bar.style.display="flex";
+      bar.innerHTML='<span>&#128260; <b>Build '+latest+'</b> is available — you\u2019re on build '+APP_BUILD+'.</span>'+
+        '<button class="ub-go" id="ubGo">Update now</button><button class="ub-x" id="ubX" title="Later">&#10005;</button>';
+      $("#ubGo").onclick=async()=>{
+        try{ if("caches" in window){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){}
+        location.reload();
+      };
+      $("#ubX").onclick=()=>{ updateDismissed=latest; bar.style.display="none"; };
+    } else if(latest<=APP_BUILD){
+      bar.style.display="none";
+    }
+  }catch(e){}
+}
+setTimeout(checkForUpdate, 4000);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkForUpdate(); });
 function anyOverlayOpen(){
   const sels=["#modal","#chase","#tpl","#complete","#recap","#settings","#qnote","#bdump","#worry","#focus"];
   return sels.some(s=>{ const el=$(s); return el && el.classList.contains("show"); });
