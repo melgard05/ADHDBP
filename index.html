@@ -248,6 +248,11 @@
     color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:90}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast-act{text-decoration:underline;cursor:pointer;margin-left:8px;color:#FFD9A0}
+  .card-menu{position:absolute;z-index:80;background:var(--card);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 8px 24px rgba(20,25,45,.18);padding:6px;min-width:170px;display:flex;flex-direction:column;gap:2px}
+  .card-menu button{text-align:left;background:transparent;border:none;padding:9px 12px;border-radius:8px;font-size:14px;color:var(--ink);cursor:pointer}
+  .card-menu button:hover,.card-menu button:active{background:var(--panel)}
+  .trash-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink)}
   @media(min-width:720px){ .board.cols{grid-template-columns:1fr 1fr} }
 </style>
 </head>
@@ -255,7 +260,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 48</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 49</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -550,7 +555,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 48</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 49</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -610,6 +615,11 @@
         <div class="set-row"><span>Download every task as a spreadsheet.</span><button class="btn-ghost" id="exportBtn">&#11015; Export CSV</button></div>
         <div class="set-row"><span id="setDoneCount">Clear finished tasks off the board.</span><button class="btn-ghost" id="clearDoneBtn" style="color:var(--hi)">&#128465; Clear completed</button></div>
         <div class="set-note">Clearing completed tasks removes them from every device. This can't be undone.</div>
+      </div>
+      <div class="set-sec">
+        <div class="set-h">Recently deleted</div>
+        <div id="trashList" class="set-note">…</div>
+        <div class="set-note">Deleted tasks from the last 30 days. Tap Restore to bring one back.</div>
       </div>
     </div>
     <div class="sheet-foot"><span></span><button class="btn-primary" id="setClose">Done</button></div>
@@ -1060,11 +1070,9 @@ function card(t){
     '<div class="t-actions">'+
     (act?'<button class="icon-btn '+(isFocusToday(t)?"star-on":"")+'" data-act="star" title="Add to Today\'s 3">'+(isFocusToday(t)?"&#9733;":"&#9734;")+'</button>':"")+
     (act?'<button class="icon-btn" data-act="start" title="Start now (focus)">&#9654;</button>':"")+
-    (act?'<button class="icon-btn" data-act="nap" title="Not now — snooze 3 days">&#128164;</button>':"")+
-    (act?'<button class="icon-btn" data-act="wait" title="Done my part — park &amp; set a chase reminder">&#8987;</button>':"")+
     (t.status==="waiting"?'<button class="icon-btn" data-act="chase" title="Copy a follow-up message">&#128203;</button>':"")+
     (t.status==="waiting"?'<button class="icon-btn" data-act="snooze" title="Push chase 3 days">&#128564;</button>':"")+
-    (act?'<button class="icon-btn" data-act="note" title="Quick note (no questions)">&#128221;</button>':"")+
+    (act?'<button class="icon-btn" data-act="more" title="More actions">&#8943;</button>':"")+
     '<button class="icon-btn" data-act="edit" title="Edit">&#9998;</button></div>';
   const q=s=>el.querySelector(s);
   q('[data-act="check"]').onclick=()=>{ if(t.status==="done"){ t.status="todo"; t.completedAt=null; touch(t); save(); render(); } else openComplete(t.id); };
@@ -1074,11 +1082,38 @@ function card(t){
   if(q('[data-act="nap"]')) q('[data-act="nap"]').onclick=()=>snoozeTask(t);
   if(q('[data-act="note"]')) q('[data-act="note"]').onclick=()=>openQNote(t.id);
   if(q('[data-act="wait"]')) q('[data-act="wait"]').onclick=()=>moveToWaiting(t);
+  if(q('[data-act="more"]')) q('[data-act="more"]').onclick=(e)=>openCardMenu(e,t);
   if(q('[data-act="chase"]')) q('[data-act="chase"]').onclick=()=>openChase(t);
   if(q('[data-act="snooze"]')) q('[data-act="snooze"]').onclick=()=>snoozeChase(t);
   q('[data-act="edit"]').onclick=()=>openEdit(t.id);
   return el;
 }
+function closeCardMenu(){ const m=$("#cardMenu"); if(m) m.remove(); }
+function openCardMenu(e, t){ e.stopPropagation(); closeCardMenu();
+  const items=[
+    {label:"&#128164; Snooze 3 days", fn:()=>snoozeTask(t)},
+    {label:"&#8987; Park — I did my part", fn:()=>moveToWaiting(t)},
+    {label:"&#128221; Quick note", fn:()=>openQNote(t.id)}
+  ];
+  const m=document.createElement("div"); m.className="card-menu"; m.id="cardMenu";
+  m.innerHTML=items.map((it,i)=>'<button data-i="'+i+'">'+it.label+'</button>').join("");
+  document.body.appendChild(m);
+  const r=e.currentTarget.getBoundingClientRect();
+  const w=180; let left=window.scrollX+r.right-w; if(left<8) left=8;
+  m.style.top=(window.scrollY+r.bottom+4)+"px"; m.style.left=left+"px";
+  m.querySelectorAll("button").forEach((b,i)=>b.onclick=(ev)=>{ ev.stopPropagation(); closeCardMenu(); items[i].fn(); });
+  setTimeout(()=>document.addEventListener("click", closeCardMenu, {once:true}),0);
+}
+function renderTrash(){ const box=$("#trashList"); if(!box) return;
+  const cut=now()-30*86400000;
+  const del=tasks.filter(t=>t.deleted && (t.updatedAt||0)>=cut).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  if(!del.length){ box.innerHTML="Nothing deleted recently."; return; }
+  box.innerHTML="";
+  del.slice(0,40).forEach(t=>{ const row=document.createElement("div"); row.className="trash-row";
+    const when=t.updatedAt?new Date(t.updatedAt).toLocaleDateString(undefined,{month:"short",day:"numeric"}):"";
+    row.innerHTML='<span>'+esc(t.title||"(untitled)")+(when?' <span style="color:var(--muted);font-size:11px">· '+when+'</span>':'')+'</span><button class="btn-ghost" style="padding:3px 10px;font-size:12px">Restore</button>';
+    row.querySelector("button").onclick=()=>{ t.deleted=false; touch(t); save(); render(); renderTrash(); toast("Restored"); };
+    box.appendChild(row); }); }
 function refreshCats(){ const cats=[...new Set(live().map(t=>t.category).filter(Boolean))].sort();
   const cf=$("#catFilter"), cur=cf.value;
   cf.innerHTML='<option value="">All categories</option>'+cats.map(c=>'<option '+(c===cur?"selected":"")+'>'+esc(c)+'</option>').join("");
@@ -1573,10 +1608,12 @@ $("#tReset").onclick=()=>{ stopTimer(); resetTimer(); };
 
 /* ---- CSV export ---- */
 $("#exportBtn").onclick=()=>{
-  const cols=["title","category","priority","status","locations","helpFor","anxiety","horizon","energy","estimate","due","deadline","recur","waitOn","waitSince","notes","lastUpdate","pickUpNext"];
+  const cols=["title","category","priority","status","locations","helpFor","anxiety","horizon","energy","estimate","due","deadline","deadlineReminders","recur","waitOn","waitSince","notes","lastUpdate","pickUpNext"];
+  const offLabel={10080:"1wk",4320:"3d",1440:"1d",240:"4h",60:"1h"};
   const rows=live().map(t=>{ const le=t.log&&t.log.length?t.log[t.log.length-1]:null;
     const lastUpdate=le?[le.summary,le.did].filter(Boolean).join(": "):""; const pickUpNext=le?(le.resume||""):"";
-    return cols.map(c=>{ let v; if(c==="anxiety")v=t.anxiety?"yes":""; else if(c==="lastUpdate")v=lastUpdate; else if(c==="pickUpNext")v=pickUpNext; else if(c==="locations")v=taskLocs(t).join(" | "); else v=(t[c]==null?"":t[c]);
+    const dlrem=(Array.isArray(t.dlReminds)?t.dlReminds:[]).map(m=>offLabel[m]||(m+"m")).join(" | ");
+    return cols.map(c=>{ let v; if(c==="anxiety")v=t.anxiety?"yes":""; else if(c==="lastUpdate")v=lastUpdate; else if(c==="pickUpNext")v=pickUpNext; else if(c==="locations")v=taskLocs(t).join(" | "); else if(c==="deadlineReminders")v=dlrem; else v=(t[c]==null?"":t[c]);
       v=v.toString().replace(/"/g,'""'); return /[",\n]/.test(v)?'"'+v+'"':v; }).join(","); });
   const blob=new Blob([cols.join(",")+"\n"+rows.join("\n")],{type:"text/csv"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="taskdesk-"+todayStr()+".csv"; a.click(); };
@@ -1645,7 +1682,7 @@ function updateSettings(){
       ? '<div class="mood-dots">'+mh.map(x=>'<span class="mood-dot mood-'+x.m+'" title="'+esc(x.d)+': '+(lbl[x.m]||x.m)+'"></span>').join("")+'</div>'
       : "No mood check-ins yet. Tapping the mood toggle (Low / Steady / High) logs the day."; }
 }
-$("#settingsBtn").onclick=()=>{ initQuietUI(); updateSettings(); $("#settings").classList.add("show"); };
+$("#settingsBtn").onclick=()=>{ initQuietUI(); renderTrash(); updateSettings(); $("#settings").classList.add("show"); $("#settings").scrollTop=0; };
 $("#pushBtn").onclick=enablePush;
 $("#setX").onclick=()=>$("#settings").classList.remove("show");
 $("#setWorkerUrl").onchange=()=>{ const v=$("#setWorkerUrl").value.trim().replace(/\/$/,""); PUSH.workerURL=v;
@@ -1740,7 +1777,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 48"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 49"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
@@ -1782,6 +1819,11 @@ function closeTopOverlay(){
 }
 history.pushState(null,"");
 window.addEventListener("popstate",()=>{ if(anyOverlayOpen()){ closeTopOverlay(); history.pushState(null,""); } });
+/* open a specific task when arriving from a notification */
+function openTaskFromNotif(id){ if(!id) return; const t=tasks.find(x=>x.id===id && !x.deleted); if(t) openEdit(id); }
+(function(){ try{ const p=new URLSearchParams(location.search).get("task");
+  if(p){ history.replaceState(null,"", location.pathname); setTimeout(()=>openTaskFromNotif(p), 300); } }catch(e){} })();
+if("serviceWorker" in navigator){ navigator.serviceWorker.addEventListener("message", ev=>{ if(ev.data && ev.data.openTask) openTaskFromNotif(ev.data.openTask); }); }
 if("Notification" in window && Notification.permission==="granted") $("#notifyBtn").textContent="🔔 Reminders on";
 if(fbEnabled()){ syncPull(); setInterval(syncPull,15000); }
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }

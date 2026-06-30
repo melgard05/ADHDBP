@@ -42,10 +42,14 @@ self.addEventListener("fetch", e => {
 
 self.addEventListener("notificationclick", e => {
   e.notification.close();
+  const id = (e.notification.tag || "").split("_")[0];
+  const url = id ? ("./?task=" + encodeURIComponent(id)) : "./";
   e.waitUntil(
-    self.clients.matchAll({ type: "window" }).then(list => {
-      for (const c of list) { if ("focus" in c) return c.focus(); }
-      if (self.clients.openWindow) return self.clients.openWindow("./");
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if ("focus" in c) { c.postMessage({ openTask: id }); return c.focus(); }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
     })
   );
 });
