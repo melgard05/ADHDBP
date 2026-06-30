@@ -67,6 +67,32 @@ self.addEventListener("push", e => {
     }
     // Otherwise it's a silent ping from the Worker — look up what's due right now.
     try {
+      // Morning summary signal?
+      try {
+        const sr = await fetch(FB_URL + "/_summary.json", { cache: "no-store" });
+        if (sr.ok) {
+          const sig = await sr.json();
+          if (sig && sig.ms && (Date.now() - sig.ms) < 180000) {
+            const tr = await fetch(FB_URL + "/" + FB_PATH + ".json", { cache: "no-store" });
+            const dd = tr.ok ? await tr.json() : null;
+            const tk = Array.isArray(dd) ? dd : (dd ? Object.values(dd) : []);
+            const now2 = Date.now();
+            const today = new Date(); today.setHours(23,59,59,999); const endToday = today.getTime();
+            const active = tk.filter(t => t && !t.deleted && t.status !== "done");
+            const dueToday = active.filter(t => t.dueMs && t.dueMs <= endToday).length;
+            const overdue = active.filter(t => t.dueMs && t.dueMs < now2).length;
+            const starred = active.filter(t => t.focusDay).length;
+            const bits = [];
+            bits.push(dueToday + " due today");
+            if (overdue) bits.push(overdue + " overdue");
+            if (starred) bits.push(starred + " starred");
+            return self.registration.showNotification("Good morning \u2600\uFE0F", {
+              body: bits.join(" \u00B7 ") + ". Tap to open your board.",
+              tag: "morning-summary", icon: "icon-192.png", badge: "icon-192.png"
+            });
+          }
+        }
+      } catch (_) {}
       const r = await fetch(FB_URL + "/" + FB_PATH + ".json", { cache: "no-store" });
       if (!r.ok) return;
       const d = await r.json();

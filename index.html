@@ -253,6 +253,20 @@
   .card-menu button{text-align:left;background:transparent;border:none;padding:9px 12px;border-radius:8px;font-size:14px;color:var(--ink);cursor:pointer}
   .card-menu button:hover,.card-menu button:active{background:var(--panel)}
   .trash-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink)}
+  .welcome-panel{text-align:center;padding:40px 20px;color:var(--muted)}
+  .welcome-panel .wp-emoji{font-size:40px}
+  .welcome-panel h2{margin:8px 0 6px;color:var(--ink)}
+  .welcome-panel p{max-width:420px;margin:0 auto;line-height:1.5}
+  .btn-ghost.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  body.calm .hint,body.calm .cap-tools,body.calm #searchWrap,body.calm .modebar,body.calm .mb-help,body.calm .suggest,body.calm .filters,body.calm .lane-nav,body.calm #filterBar,body.calm .alerts{display:none !important}
+  body.calm #lane-waiting,body.calm #lane-done{display:none !important}
+  html{overscroll-behavior-y:contain}
+  #ptr{position:fixed;top:-44px;left:50%;transform:translateX(-50%);width:36px;height:36px;border-radius:50%;
+    background:var(--card);border:1px solid var(--line);box-shadow:0 4px 12px rgba(20,25,45,.15);
+    display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--accent);z-index:90;opacity:0}
+  #ptr.ready{color:var(--done);border-color:var(--done)}
+  #ptr.spin{animation:ptrspin .8s linear infinite;top:8px;opacity:1}
+  @keyframes ptrspin{to{transform:translateX(-50%) rotate(360deg)}}
   @media(min-width:720px){ .board.cols{grid-template-columns:1fr 1fr} }
 </style>
 </head>
@@ -260,8 +274,9 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 49</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 50</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
+        <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
         <button class="btn-ghost" id="recapBtn" title="What I finished this week">&#128202; Week</button>
@@ -280,7 +295,7 @@
       <button class="btn-ghost" id="oneThingBtn" title="Just show me one thing to do">&#129496; One thing</button>
     </div>
 
-    <div style="margin-top:12px;position:relative">
+    <div id="searchWrap" style="margin-top:12px;position:relative">
       <input id="search" placeholder="🔍  Search tasks or a person's name…" autocomplete="off"
         style="width:100%;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 34px 9px 12px;font-size:14px;font-family:inherit;color:var(--ink)">
       <button id="searchClear" title="Clear" style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--muted);font-size:16px;padding:4px 8px">✕</button>
@@ -555,7 +570,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 49</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 50</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -593,6 +608,14 @@
           <div class="field"><label>Wait this long before texting</label>
             <select id="smsGrace"><option value="5">5 minutes</option><option value="10" selected>10 minutes</option><option value="15">15 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></div>
           <div class="set-note">A text goes out only if the task is still due and you haven't touched it after the wait. Acting on it in the app (snooze, progress, done) cancels the text.</div>
+        </div>
+      </div>
+      <div class="set-sec">
+        <div class="set-h">Morning summary</div>
+        <div class="set-row"><label class="check-row" style="margin:0"><input type="checkbox" id="sumOn"> A morning rundown of your day</label></div>
+        <div id="sumWrap" style="display:none">
+          <div class="set-row"><span>Send it at</span><select id="sumHour"></select></div>
+          <div class="set-note">A single morning notification: how many tasks are due today, overdue, and starred. Needs background reminders on.</div>
         </div>
       </div>
       <div class="set-sec">
@@ -980,6 +1003,11 @@ function render(){
   ];
   const board=$("#board"); board.innerHTML="";
   const nav=$("#laneNav"); nav.innerHTML="";
+  if(!live().length){
+    const w=document.createElement("div"); w.className="welcome-panel";
+    w.innerHTML='<div class="wp-emoji">🌤️</div><h2>A clear board.</h2><p>Add the next thing on your mind up top — or empty your head with <b>🧠 Brain dump</b>. One small step is plenty.</p>';
+    board.appendChild(w); renderAlerts(); renderSuggest(); return;
+  }
   if(view==="today"){
     const fc=focusCount();
     const panel=document.createElement("div"); panel.className="today-panel";
@@ -1027,6 +1055,7 @@ function card(t){
   const el=document.createElement("div");
   el.className="task pr-"+t.priority+(t.status==="done"?" is-done":"")+(t.anxiety?" anx":"")+(isFocusToday(t)?" focus":"");
   el.dataset.id=t.id;
+  { const ls=taskLocs(t); const rc={work:"#3B82F6",home:"#10B981",cabin:"#8B5CF6",newhouse:"#F59E0B"}[ls[0]]; if(rc) el.style.borderRight="4px solid "+rc; }
   const overdue=t.due && new Date(t.due)<new Date() && t.status!=="done";
   const tags=[];
   if(isFocusToday(t)) tags.push('<span class="tag" style="background:var(--accent);color:#fff">⭐ today</span>');
@@ -1037,7 +1066,7 @@ function card(t){
   if(t.helpFor) tags.push('<span class="tag tag-help">🤝 for '+esc(t.helpFor)+'</span>');
   if(t.category) tags.push('<span class="tag tag-cat">'+esc(t.category)+'</span>');
   if(t.due){ const lbl=t.status==="waiting"?"chase ":""; const od=overdue?(t.status==="waiting"?" · now":" · overdue"):"";
-    tags.push('<span class="tag tag-due '+(overdue?"overdue":"")+'">&#9200; '+lbl+fmtDue(t.due)+od+'</span>'); }
+    tags.push('<span class="tag tag-due '+(overdue?"overdue":"")+'" data-act="duemenu" style="cursor:pointer">&#9200; '+lbl+fmtDue(t.due)+od+'</span>'); }
   { const dl=deadlineTag(t); if(dl && t.status!=="done") tags.push(dl); }
   if(t.parentId){ const par=tasks.find(x=>x.id===t.parentId&&!x.deleted); if(par) tags.push('<span class="tag tag-sub" title="Sub-task">↳ '+esc(par.title.length>24?par.title.slice(0,24)+"…":par.title)+'</span>'); }
   { const kids=live().filter(x=>x.parentId===t.id); if(kids.length){ const dn=kids.filter(k=>k.status==="done").length; tags.push('<span class="tag tag-parent">&#128206; '+dn+'/'+kids.length+' sub-tasks</span>'); } }
@@ -1086,7 +1115,44 @@ function card(t){
   if(q('[data-act="chase"]')) q('[data-act="chase"]').onclick=()=>openChase(t);
   if(q('[data-act="snooze"]')) q('[data-act="snooze"]').onclick=()=>snoozeChase(t);
   q('[data-act="edit"]').onclick=()=>openEdit(t.id);
+  if(q('[data-act="duemenu"]')) q('[data-act="duemenu"]').onclick=(e)=>{ e.stopPropagation(); openDueMenu(e,t); };
+  if(t.status!=="done") attachSwipe(el, t);
   return el;
+}
+function attachSwipe(el, t){
+  let x0=0,y0=0,dx=0,dragging=false,decided=false,horiz=false;
+  const body=el.querySelector(".t-body")||el;
+  el.addEventListener("touchstart",e=>{ if(e.target.closest("button,input,.tag-due")) return; const tch=e.touches[0]; x0=tch.clientX; y0=tch.clientY; dx=0; dragging=true; decided=false; horiz=false; el.style.transition=""; },{passive:true});
+  el.addEventListener("touchmove",e=>{ if(!dragging) return; const tch=e.touches[0]; dx=tch.clientX-x0; const dy=tch.clientY-y0;
+    if(!decided){ decided=true; horiz=Math.abs(dx)>Math.abs(dy)+4; }
+    if(horiz){ el.style.transform="translateX("+dx+"px)"; el.style.opacity=String(Math.max(.5,1-Math.abs(dx)/400));
+      el.style.background = dx>60 ? "#EAF7F1" : (dx<-60 ? "#FFF4E5" : ""); } },{passive:true});
+  el.addEventListener("touchend",()=>{ if(!dragging) return; dragging=false; el.style.transition="transform .2s, opacity .2s, background .2s";
+    if(horiz && dx>90){ el.style.transform="translateX(120%)"; el.style.opacity="0"; setTimeout(()=>quickDone(t),120); }
+    else if(horiz && dx<-90){ el.style.transform="translateX(-120%)"; el.style.opacity="0"; setTimeout(()=>snoozeTask(t),120); }
+    else { el.style.transform=""; el.style.opacity=""; el.style.background=""; } });
+}
+function quickDone(t){ t.status="done"; t.completedAt=now(); spawnRecur(t); touch(t); save();
+  try{ if(navigator.vibrate) navigator.vibrate(30); }catch(e){} confetti(); render();
+  toast("Done ✓", "Undo", ()=>{ t.status="todo"; t.completedAt=null; touch(t); save(); render(); }); }
+function openDueMenu(e, t){ e.stopPropagation(); closeCardMenu();
+  const base=t.due?new Date(t.due):new Date(); const setDue=(d)=>{ t.due=localDT(d); t.reminded=false; touch(t); save(); render(); toast("Reminder updated"); };
+  const tn=new Date(); const ton=new Date(tn); ton.setHours(18,0,0,0); const tom=new Date(tn); tom.setDate(tom.getDate()+1); tom.setHours(9,0,0,0);
+  const items=[
+    {label:"+1 hour", fn:()=>setDue(new Date(base.getTime()+3600000))},
+    {label:"+1 day", fn:()=>setDue(new Date(base.getTime()+86400000))},
+    {label:"This evening (6 PM)", fn:()=>setDue(ton)},
+    {label:"Tomorrow 9 AM", fn:()=>setDue(tom)},
+    {label:"✎ Pick exact time", fn:()=>openEdit(t.id)},
+    {label:"✕ Clear reminder", fn:()=>{ t.due=""; t.reminded=false; touch(t); save(); render(); toast("Reminder cleared"); }}
+  ];
+  const m=document.createElement("div"); m.className="card-menu"; m.id="cardMenu";
+  m.innerHTML=items.map((it,i)=>'<button data-i="'+i+'">'+it.label+'</button>').join("");
+  document.body.appendChild(m);
+  const r=e.currentTarget.getBoundingClientRect(); let left=window.scrollX+r.left; if(left+190>window.scrollX+document.documentElement.clientWidth) left=window.scrollX+document.documentElement.clientWidth-198;
+  m.style.top=(window.scrollY+r.bottom+4)+"px"; m.style.left=Math.max(8,left)+"px";
+  m.querySelectorAll("button").forEach((b,i)=>b.onclick=(ev)=>{ ev.stopPropagation(); closeCardMenu(); items[i].fn(); });
+  setTimeout(()=>document.addEventListener("click", closeCardMenu, {once:true}),0);
 }
 function closeCardMenu(){ const m=$("#cardMenu"); if(m) m.remove(); }
 function openCardMenu(e, t){ e.stopPropagation(); closeCardMenu();
@@ -1324,12 +1390,14 @@ async function sendTestPush(){
   catch(e){ alert("Couldn't reach the Worker — "+(e&&e.message?e.message:"network error")); } }
 function loadQuiet(){ let q={quiet:false,start:22,end:7}; try{ const r=localStorage.getItem("td_quiet"); if(r)q=JSON.parse(r); }catch(e){} return q; }
 function loadSms(){ let s={on:false,webhook:"",phone:"",graceMin:10}; try{ const r=localStorage.getItem("td_sms"); if(r)s=JSON.parse(r); }catch(e){} return s; }
+function loadSum(){ let s={on:false,hour:7}; try{ const r=localStorage.getItem("td_summary"); if(r)s=JSON.parse(r); }catch(e){} return s; }
 function postConfig(){
   if(!PUSH.workerURL) return;
-  const q=loadQuiet(), s=loadSms();
+  const q=loadQuiet(), s=loadSms(), sm=loadSum();
   const cfg={ quiet:q.quiet, start:q.start, end:q.end,
     tz:(function(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone;}catch(e){return "UTC";}})(),
-    sms:{ on:s.on, webhook:s.webhook, phone:s.phone, graceMin:s.graceMin } };
+    sms:{ on:s.on, webhook:s.webhook, phone:s.phone, graceMin:s.graceMin },
+    summary:{ on:sm.on, hour:sm.hour } };
   fetch(PUSH.workerURL.replace(/\/$/,"")+"/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cfg)}).catch(()=>{});
 }
 function saveQuiet(){
@@ -1344,6 +1412,13 @@ function saveSms(){
   $("#smsWrap").style.display=s.on?"block":"none";
   postConfig();
 }
+function saveSum(){
+  const s={ on:$("#sumOn").checked, hour:parseInt($("#sumHour").value) };
+  if(isNaN(s.hour)) s.hour=7;
+  try{ localStorage.setItem("td_summary",JSON.stringify(s)); }catch(e){}
+  $("#sumWrap").style.display=s.on?"block":"none";
+  postConfig();
+}
 function initQuietUI(){
   const sH=$("#quietStart"), eH=$("#quietEnd"); if(sH && !sH.options.length){
     let o=""; for(let i=0;i<24;i++){ const ap=i<12?"AM":"PM"; const h12=(i%12)||12; o+='<option value="'+i+'">'+h12+" "+ap+'</option>'; }
@@ -1353,6 +1428,8 @@ function initQuietUI(){
   $("#quietWrap").style.display=q.quiet?"block":"none";
   const s=loadSms(); $("#smsOn").checked=s.on; $("#smsWebhook").value=s.webhook||""; $("#smsPhone").value=s.phone||""; $("#smsGrace").value=String(s.graceMin||10);
   $("#smsWrap").style.display=s.on?"block":"none";
+  { const sh=$("#sumHour"); if(sh && !sh.options.length){ let o=""; for(let i=0;i<24;i++){ const ap=i<12?"AM":"PM"; const h12=(i%12)||12; o+='<option value="'+i+'">'+h12+" "+ap+'</option>'; } sh.innerHTML=o; }
+    const sm=loadSum(); $("#sumOn").checked=sm.on; $("#sumHour").value=String(sm.hour); $("#sumWrap").style.display=sm.on?"block":"none"; }
 }
 
 /* ---- edit modal ---- */
@@ -1524,7 +1601,7 @@ $("#cSave").onclick=()=>{ const t=tasks.find(x=>x.id===completeId); if(!t)return
   t.priority=getSeg("#cPriority")||t.priority;
   t.due=$("#cRemind").value;
   if(!t.log)t.log=[]; t.log.push({t:now(),summary:summary,did:did,resume:resume,nextStep:nextStep,blocker:blocker,next:next});
-  if(next==="done"){ t.status="done"; t.completedAt=now(); spawnRecur(t); }
+  if(next==="done"){ t.status="done"; t.completedAt=now(); spawnRecur(t); try{ if(navigator.vibrate) navigator.vibrate(30); }catch(e){} }
   else if(next==="waiting"){ t.status="waiting"; if(!t.waitSince)t.waitSince=todayStr();
     t.waitOn=$("#cWaitOn").value.trim()||t.waitOn; if(!t.due)t.due=chaseDate(3); t.completedAt=null; }
   else { t.status=next; t.completedAt=null; }
@@ -1719,6 +1796,8 @@ $("#smsOn").onchange=saveSms;
 $("#smsWebhook").onchange=saveSms;
 $("#smsPhone").onchange=saveSms;
 $("#smsGrace").onchange=saveSms;
+$("#sumOn").onchange=saveSum;
+$("#sumHour").onchange=saveSum;
 { const fr=$("#filterReset"); if(fr){ let v=loadFilterReset(); if(isNaN(v)) v=30; fr.value=String(v);
   fr.onchange=()=>{ try{ localStorage.setItem("td_filterreset", fr.value); }catch(e){} }; } }
 $("#setClose").onclick=()=>$("#settings").classList.remove("show");
@@ -1777,7 +1856,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 49"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 50"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
@@ -1824,6 +1903,23 @@ function openTaskFromNotif(id){ if(!id) return; const t=tasks.find(x=>x.id===id 
 (function(){ try{ const p=new URLSearchParams(location.search).get("task");
   if(p){ history.replaceState(null,"", location.pathname); setTimeout(()=>openTaskFromNotif(p), 300); } }catch(e){} })();
 if("serviceWorker" in navigator){ navigator.serviceWorker.addEventListener("message", ev=>{ if(ev.data && ev.data.openTask) openTaskFromNotif(ev.data.openTask); }); }
+/* calm "just my 3" mode */
+let calmOn=false, calmPrevView="all";
+function toggleCalm(){ calmOn=!calmOn; document.body.classList.toggle("calm", calmOn);
+  if(calmOn){ calmPrevView=view; view="today"; }
+  else { view=calmPrevView; }
+  document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("active",x.dataset.view===view));
+  const b=$("#calmBtn"); if(b) b.classList.toggle("on", calmOn);
+  render(); window.scrollTo(0,0); }
+{ const b=$("#calmBtn"); if(b) b.onclick=toggleCalm; }
+/* pull-to-refresh */
+(function(){ let y0=0,pulling=false,d=0; const ind=document.createElement("div"); ind.id="ptr"; ind.textContent="↻"; document.body.appendChild(ind);
+  window.addEventListener("touchstart",e=>{ if(window.scrollY<=0 && !anyOverlayOpen()){ y0=e.touches[0].clientY; pulling=true; d=0; } else pulling=false; },{passive:true});
+  window.addEventListener("touchmove",e=>{ if(!pulling) return; d=e.touches[0].clientY-y0; if(d>0 && window.scrollY<=0){ const v=Math.min(d,80); ind.style.top=(v-44)+"px"; ind.style.opacity=String(Math.min(1,v/70)); ind.classList.toggle("ready",v>=70); } },{passive:true});
+  window.addEventListener("touchend",()=>{ if(!pulling) return; pulling=false; const ready=d>=70;
+    ind.style.transition="top .25s, opacity .25s"; ind.style.top="-44px"; ind.style.opacity="0";
+    setTimeout(()=>ind.style.transition="",260);
+    if(ready){ ind.classList.add("spin"); if(fbEnabled()){ syncState="saving"; syncNote(); syncPull(); fbPushDebounced(); } setTimeout(()=>{ ind.classList.remove("spin"); toast("Synced"); },800); } }); })();
 if("Notification" in window && Notification.permission==="granted") $("#notifyBtn").textContent="🔔 Reminders on";
 if(fbEnabled()){ syncPull(); setInterval(syncPull,15000); }
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
