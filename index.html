@@ -247,6 +247,7 @@
   #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);
     color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:90}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast-act{text-decoration:underline;cursor:pointer;margin-left:8px;color:#FFD9A0}
   @media(min-width:720px){ .board.cols{grid-template-columns:1fr 1fr} }
 </style>
 </head>
@@ -254,7 +255,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 47</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 48</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
@@ -549,7 +550,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 47</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 48</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -795,6 +796,12 @@ function doneStreak(){ const days={}; live().forEach(t=>{ if(t.completedAt){ con
   while(days[day.getTime()]){ streak++; day.setDate(day.getDate()-1); }
   return streak; }
 let manicAdds=0;
+function toast(msg, actionLabel, actionFn){ const t=$("#toast"); if(!t) return;
+  t.innerHTML = esc(String(msg)) + (actionLabel ? ' <b class="toast-act">'+esc(actionLabel)+'</b>' : '');
+  t.classList.add("show");
+  const act=t.querySelector(".toast-act");
+  if(act && actionFn){ act.onclick=()=>{ try{ actionFn(); }catch(e){} t.classList.remove("show"); }; }
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"), actionLabel?6000:2400); }
 function fmtMin(m){ m=parseInt(m)||0; if(!m) return ""; const h=Math.floor(m/60), mm=m%60; return (h?h+"h":"")+(mm?(h?" ":"")+mm+"m":(h?"":"0m")); }
 function estMultiplier(){ const rs=live().filter(t=>t.status==="done"&&(parseInt(t.estimate)||0)>0&&(t.timeSpentSec||0)>0).map(t=>(t.timeSpentSec/60)/parseInt(t.estimate));
   if(rs.length<3) return null; rs.sort((a,b)=>a-b); const mid=rs[Math.floor(rs.length/2)]; return Math.max(0.5,Math.min(4,mid)); }
@@ -1420,7 +1427,8 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.waitOn=$("#mWaitOn").value.trim(); t.waitSince=$("#mWaitSince").value;
   if(t.status==="waiting"&&!t.waitSince)t.waitSince=todayStr();
   t.reminded=false; touch(t); save(); closeModal(); render(); };
-$("#mDelete").onclick=()=>{ if(confirm("Delete this task?")){ const t=tasks.find(x=>x.id===editId); if(t){t.deleted=true;touch(t);} save(); closeModal(); render(); } };
+$("#mDelete").onclick=()=>{ if(confirm("Delete this task?")){ const t=tasks.find(x=>x.id===editId); if(t){ t.deleted=true; touch(t); const did=t.id; save(); closeModal(); render();
+  toast("Task deleted", "Undo", ()=>{ const tt=tasks.find(x=>x.id===did); if(tt){ tt.deleted=false; touch(tt); save(); render(); } }); } } };
 $("#mCancel").onclick=closeModal;
 function closeModal(){ $("#modal").classList.remove("show"); editId=null; }
 
@@ -1732,7 +1740,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 47"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 48"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
