@@ -274,7 +274,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 50</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 51</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -373,6 +373,7 @@
   <div class="sheet">
     <h3 id="mTitle">Edit task</h3>
     <div class="sheet-body">
+      <button type="button" id="mUpdateProgress" class="btn-ghost" style="width:100%;margin-bottom:12px;padding:10px;font-weight:600;color:var(--accent);border-color:var(--accent)">&#128221; Update progress — where I left off / next step</button>
       <div class="field"><label>Task</label><input id="mName"></div>
       <div class="field"><label>Notes</label><textarea id="mNotes" placeholder="Details, links, the rest of the steps…"></textarea></div>
       <div class="field"><label>Promised to help (who)</label><input id="mHelp" placeholder="Person you committed to (optional)"></div>
@@ -570,7 +571,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 50</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 51</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -1486,6 +1487,7 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   $("#mAnx").checked=!!t.anxiety; $("#mHelp").value=t.helpFor||"";
   setSeg("#mPr",t.priority); setSeg("#mStatus",t.status);
   $("#waitWrap").style.display=t.status==="waiting"?"grid":"none";
+  { const up=$("#mUpdateProgress"); if(up) up.style.display = (t.status==="done") ? "none" : "block"; }
   refreshDueDow(); refreshDeadlineDow(); refreshNthWrap(); renderSubs(id);
   { const offs=Array.isArray(t.dlReminds)?t.dlReminds.map(Number):[]; document.querySelectorAll(".dlRemBox").forEach(b=>b.checked=offs.includes(parseInt(b.value))); }
   { const sp=$("#estSpent"); const sec=t.timeSpentSec||0;
@@ -1541,6 +1543,7 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.reminded=false; touch(t); save(); closeModal(); render(); };
 $("#mDelete").onclick=()=>{ if(confirm("Delete this task?")){ const t=tasks.find(x=>x.id===editId); if(t){ t.deleted=true; touch(t); const did=t.id; save(); closeModal(); render();
   toast("Task deleted", "Undo", ()=>{ const tt=tasks.find(x=>x.id===did); if(tt){ tt.deleted=false; touch(tt); save(); render(); } }); } } };
+$("#mUpdateProgress").onclick=()=>{ const id=editId; closeModal(); openComplete(id); };
 $("#mCancel").onclick=closeModal;
 function closeModal(){ $("#modal").classList.remove("show"); editId=null; }
 
@@ -1856,7 +1859,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 50"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 51"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
