@@ -5,7 +5,7 @@
    - Receives Web Push (for the future push backend). */
 
 const CACHE = "taskdesk-v4";   // bumped for Phase 2 push
-const ASSETS = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png"];
+const ASSETS = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "badge.png"];
 const FB_URL = "https://adhd-bipolar-organization-default-rtdb.firebaseio.com";
 const FB_PATH = "td_k9m4x7qz2p";
 
@@ -62,7 +62,7 @@ self.addEventListener("push", e => {
     if (data && data.title) {
       return self.registration.showNotification(data.title, {
         body: data.body || "", tag: data.tag || "taskdesk",
-        icon: "icon-192.png", badge: "icon-192.png"
+        icon: "icon-192.png", badge: "badge.png"
       });
     }
     // Otherwise it's a silent ping from the Worker — look up what's due right now.
@@ -88,7 +88,7 @@ self.addEventListener("push", e => {
             if (starred) bits.push(starred + " starred");
             return self.registration.showNotification("Good morning \u2600\uFE0F", {
               body: bits.join(" \u00B7 ") + ". Tap to open your board.",
-              tag: "morning-summary", icon: "icon-192.png", badge: "icon-192.png"
+              tag: "morning-summary", icon: "icon-192.png", badge: "badge.png"
             });
           }
         }
@@ -103,11 +103,11 @@ self.addEventListener("push", e => {
         (Array.isArray(t.remindMs) && t.remindMs.some(ms => ms <= now))
       ));
       if (!due.length) {
-        return self.registration.showNotification("ADHDBP Control Panel", { body: "Checked your reminders — nothing due right now.", tag: "td-check", icon: "icon-192.png", badge: "icon-192.png" });
+        return self.registration.showNotification("ADHDBP Control Panel", { body: "Checked your reminders — nothing due right now.", tag: "td-check", icon: "icon-192.png", badge: "badge.png" });
       }
       for (const t of due.slice(0, 6)) {
         await self.registration.showNotification(t.status === "waiting" ? "Time to follow up" : "Reminder", {
-          body: t.title, tag: t.id, icon: "icon-192.png", badge: "icon-192.png"
+          body: t.title, tag: t.id, icon: "icon-192.png", badge: "badge.png"
         });
       }
     } catch (_) {}

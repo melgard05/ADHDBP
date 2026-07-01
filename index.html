@@ -253,6 +253,10 @@
   .card-menu button{text-align:left;background:transparent;border:none;padding:9px 12px;border-radius:8px;font-size:14px;color:var(--ink);cursor:pointer}
   .card-menu button:hover,.card-menu button:active{background:var(--panel)}
   .trash-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink)}
+  .attach-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13.5px}
+  .attach-thumb{width:40px;height:40px;object-fit:cover;border-radius:6px;cursor:pointer}
+  .brk-head{font-size:12.5px;color:var(--muted);margin-bottom:6px}
+  .brk-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-bottom:4px;font-size:14px;cursor:pointer}
   .welcome-panel{text-align:center;padding:40px 20px;color:var(--muted)}
   .welcome-panel .wp-emoji{font-size:40px}
   .welcome-panel h2{margin:8px 0 6px;color:var(--ink)}
@@ -274,7 +278,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 51</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 52</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -376,6 +380,15 @@
       <button type="button" id="mUpdateProgress" class="btn-ghost" style="width:100%;margin-bottom:12px;padding:10px;font-weight:600;color:var(--accent);border-color:var(--accent)">&#128221; Update progress — where I left off / next step</button>
       <div class="field"><label>Task</label><input id="mName"></div>
       <div class="field"><label>Notes</label><textarea id="mNotes" placeholder="Details, links, the rest of the steps…"></textarea></div>
+      <div class="field"><label>Attachments — link, doc, or photo</label>
+        <div id="mAttach" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="mAttachUrl" placeholder="Paste a URL or Google Drive link…" style="flex:1;min-width:180px" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button type="button" id="mAttachLinkBtn" class="btn-ghost">+ Link</button>
+          <button type="button" id="mAttachPhotoBtn" class="btn-ghost">&#128247; Photo</button>
+          <input id="mAttachFile" type="file" accept="image/*" style="display:none">
+        </div>
+      </div>
       <div class="field"><label>Promised to help (who)</label><input id="mHelp" placeholder="Person you committed to (optional)"></div>
       <div class="grid2">
         <div class="field"><label>Category</label><input id="mCat" list="catList" placeholder="e.g. Steve's, Cards, Home"><datalist id="catList"></datalist></div>
@@ -457,6 +470,8 @@
       <div class="field"><label>Sub-tasks</label>
         <div id="mSubs" style="display:flex;flex-direction:column;gap:6px"></div>
         <div style="display:flex;gap:8px;margin-top:8px"><input id="mSubAdd" placeholder="Add a sub-task / next thing…" style="flex:1"><button type="button" id="mSubAddBtn" class="btn-ghost">+ Add</button></div>
+        <button type="button" id="mBreakBtn" class="btn-ghost" style="width:100%;margin-top:8px;color:var(--accent);border-color:var(--accent)">&#10024; Break into steps with AI</button>
+        <div id="mBreakdown" style="display:none;margin-top:8px"></div>
       </div>
       <div class="field" id="mLogWrap" style="display:none"><label>Progress log</label><div id="mLog" style="font-size:12.5px;color:var(--muted)"></div></div>
     </div>
@@ -571,7 +586,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 51</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 52</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -902,7 +917,7 @@ function parseQuick(raw){
 }
 function newTask(o){ return Object.assign({id:uid(),title:"",notes:"",category:"",priority:"medium",
   status:"todo",horizon:"",energy:"",estimate:"",due:"",recur:"",recurOrd:1,recurDow:1,whenHint:"",waitOn:"",waitSince:"",
-  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,deadline:"",dlReminds:[],remindMs:[],remindedMs:[],parentId:"",inbox:false,log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
+  loc:"",locs:[],helpFor:"",anxiety:false,focusDay:"",snoozeUntil:0,timeSpentSec:0,deadline:"",dlReminds:[],remindMs:[],remindedMs:[],parentId:"",inbox:false,attach:[],log:[],reminded:false,deleted:false,createdAt:now(),updatedAt:now(),completedAt:null},o); }
 function addQuick(){ const v=$("#quickAdd").value.trim(); if(!v)return;
   const p=parseQuick(v);
   const t=newTask({title:p.title,category:p.category,priority:p.priority,horizon:p.horizon,locs:p.loc?[p.loc]:[],helpFor:p.helpFor,due:p.due});
@@ -1063,6 +1078,7 @@ function card(t){
   if(staleDays(t)>=7) tags.push('<span class="tag tag-stale">🕸 '+staleDays(t)+'d untouched</span>');
   if(isSnoozed(t)) tags.push('<span class="tag tag-snz">💤 snoozed</span>');
   { const ls=taskLocs(t); if(ls.length) tags.push('<span class="tag tag-loc">'+ls.map(locLabel).join(" · ")+'</span>'); }
+  if(Array.isArray(t.attach) && t.attach.length) tags.push('<span class="tag" style="background:#EEF2F7;color:#475569">📎 '+t.attach.length+'</span>');
   if(t.inbox) tags.push('<span class="tag" style="background:#EDE9FE;color:#6D28D9">🧠 inbox</span>');
   if(t.helpFor) tags.push('<span class="tag tag-help">🤝 for '+esc(t.helpFor)+'</span>');
   if(t.category) tags.push('<span class="tag tag-cat">'+esc(t.category)+'</span>');
@@ -1325,7 +1341,7 @@ window.addEventListener("focus", maybeResetFilters);
 function notify(title, body, tag){
   try{
     if(navigator.serviceWorker && navigator.serviceWorker.ready){
-      navigator.serviceWorker.ready.then(reg=>{ try{ reg.showNotification(title,{body:body,tag:tag,icon:"icon-192.png",badge:"icon-192.png",renotify:true}); }catch(e){ try{ new Notification(title,{body:body,tag:tag,icon:"icon-192.png"}); }catch(e2){} } })
+      navigator.serviceWorker.ready.then(reg=>{ try{ reg.showNotification(title,{body:body,tag:tag,icon:"icon-192.png",badge:"badge.png",renotify:true}); }catch(e){ try{ new Notification(title,{body:body,tag:tag,icon:"icon-192.png"}); }catch(e2){} } })
         .catch(()=>{ try{ new Notification(title,{body:body,tag:tag,icon:"icon-192.png"}); }catch(e){} });
     } else { new Notification(title,{body:body,tag:tag,icon:"icon-192.png"}); }
   }catch(e){}
@@ -1445,13 +1461,57 @@ function refreshDueDow(){ const r=dueDowText($("#mDue").value); const el=$("#mDu
   if(due){ g.href=gcalUrl({title:$("#mName").value,due:due,notes:$("#mNotes").value,estimate:curEstMin()}); g.style.display="inline-block"; }
   else g.style.display="none"; }
 function refreshNthWrap(){ $("#nthWrap").style.display=$("#mRecur").value==="monthly_nth"?"grid":"none"; }
+let editAttach=[];
+async function breakdownTask(){
+  const t=tasks.find(x=>x.id===editId); if(!t) return;
+  if(!PUSH.workerURL){ toast("Set your Worker URL in Settings first."); return; }
+  const box=$("#mBreakdown"); box.style.display="block";
+  box.innerHTML='<div class="set-note" style="margin:0">✨ Thinking of small steps…</div>';
+  try{
+    const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/breakdown",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({title:($("#mName")?$("#mName").value:t.title)||t.title, notes:$("#mNotes").value})});
+    if(r.status===400){ box.innerHTML='<div class="set-note" style="margin:0">AI isn\'t set up yet. Add an <b>ANTHROPIC_API_KEY</b> to your Worker (see steps).</div>'; return; }
+    const j=await r.json(); const steps=(j&&j.steps)||[];
+    if(!steps.length){ box.innerHTML='<div class="set-note" style="margin:0">Couldn\'t come up with steps — try rewording the task.</div>'; return; }
+    box.innerHTML='<div class="brk-head">Pick the steps to add as sub-tasks:</div>'+
+      steps.map((s,i)=>'<label class="brk-item"><input type="checkbox" class="brkBox" checked value="'+i+'"> '+esc(s)+'</label>').join("")+
+      '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" id="brkAdd" class="btn-primary" style="flex:1">Add selected</button><button type="button" id="brkIgnore" class="btn-ghost">Ignore</button></div>';
+    $("#brkIgnore").onclick=()=>{ box.style.display="none"; box.innerHTML=""; };
+    $("#brkAdd").onclick=()=>{ let added=0;
+      document.querySelectorAll(".brkBox").forEach(b=>{ if(b.checked){ const txt=steps[parseInt(b.value)]; if(txt){ const sub=newTask({title:txt, parentId:editId}); tasks.unshift(sub); added++; } } });
+      if(added){ save(); renderSubs(editId); render(); toast("Added "+added+" step"+(added>1?"s":"")); }
+      box.style.display="none"; box.innerHTML=""; };
+  }catch(e){ box.innerHTML='<div class="set-note" style="margin:0">Couldn\'t reach the AI helper. Check the Worker URL.</div>'; }
+}
+function renderAttach(){ const box=$("#mAttach"); if(!box) return;
+  if(!editAttach.length){ box.innerHTML='<div class="set-note" style="margin:0">Nothing attached yet.</div>'; return; }
+  box.innerHTML="";
+  editAttach.forEach((a,i)=>{ const row=document.createElement("div"); row.className="attach-row";
+    if(a.kind==="image"){ row.innerHTML='<img src="'+a.url+'" class="attach-thumb"><span style="flex:1">'+esc(a.name||"Photo")+'</span><button type="button" class="btn-ghost" style="padding:2px 8px;font-size:12px">Remove</button>';
+      row.querySelector("img").onclick=()=>{ const w=window.open(); if(w) w.document.write('<img src="'+a.url+'" style="max-width:100%">'); }; }
+    else { row.innerHTML='<span style="flex:1">🔗 <a href="'+esc(a.url)+'" target="_blank" rel="noopener">'+esc(a.name||a.url)+'</a></span><button type="button" class="btn-ghost" style="padding:2px 8px;font-size:12px">Remove</button>'; }
+    row.querySelector("button").onclick=()=>{ editAttach.splice(i,1); renderAttach(); };
+    box.appendChild(row); }); }
+function addAttachLink(){ let u=$("#mAttachUrl").value.trim(); if(!u) return;
+  if(!/^https?:\/\//i.test(u)) u="https://"+u;
+  editAttach.push({kind:"link", url:u, name:u.replace(/^https?:\/\//,"").slice(0,40)}); $("#mAttachUrl").value=""; renderAttach(); }
+function addAttachPhoto(file){ if(!file) return;
+  const img=new Image(); const rd=new FileReader();
+  rd.onload=()=>{ img.onload=()=>{ const max=900; let w=img.width,h=img.height;
+    if(w>max||h>max){ if(w>h){ h=Math.round(h*max/w); w=max; } else { w=Math.round(w*max/h); h=max; } }
+    const c=document.createElement("canvas"); c.width=w; c.height=h; c.getContext("2d").drawImage(img,0,0,w,h);
+    const data=c.toDataURL("image/jpeg",0.6);
+    if(data.length>1500000){ toast("That photo's too large even compressed — try a smaller one."); return; }
+    editAttach.push({kind:"image", url:data, name:file.name||"Photo"}); renderAttach(); toast("Photo attached"); };
+    img.src=rd.result; };
+  rd.readAsDataURL(file); }
 function renderSubs(pid){ const box=$("#mSubs"); const all=live().filter(x=>x.parentId===pid);
   const kids=all.filter(x=>x.status!=="done"); const doneN=all.length-kids.length;
   if(!all.length){ box.innerHTML='<div class="set-note">No sub-tasks yet — break this into smaller steps below.</div>'; return; }
   box.innerHTML="";
   kids.forEach(k=>{ const row=document.createElement("div"); row.className="sub-row";
     row.innerHTML='<input type="checkbox"><span>'+esc(k.title)+'</span><button type="button" class="btn-ghost" style="padding:2px 8px;font-size:12px">open</button>';
-    row.querySelector("input").onchange=e=>{ if(e.target.checked){ k.status="done"; k.completedAt=now(); touch(k); save(); renderSubs(pid); render(); } };
+    row.querySelector("input").onchange=e=>{ if(e.target.checked){ k.status="done"; k.completedAt=now(); touch(k); save(); renderSubs(pid); render(); try{ if(navigator.vibrate) navigator.vibrate(25); }catch(x){} toast("Step done ✓"); } };
     row.querySelector("button").onclick=()=>openEdit(k.id);
     box.appendChild(row); });
   if(!kids.length){ const e=document.createElement("div"); e.className="set-note"; e.textContent="All sub-tasks done ✓"; box.appendChild(e); }
@@ -1488,6 +1548,8 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   setSeg("#mPr",t.priority); setSeg("#mStatus",t.status);
   $("#waitWrap").style.display=t.status==="waiting"?"grid":"none";
   { const up=$("#mUpdateProgress"); if(up) up.style.display = (t.status==="done") ? "none" : "block"; }
+  editAttach = Array.isArray(t.attach) ? t.attach.map(a=>({...a})) : []; renderAttach();
+  { const bd=$("#mBreakdown"); if(bd){ bd.style.display="none"; bd.innerHTML=""; } }
   refreshDueDow(); refreshDeadlineDow(); refreshNthWrap(); renderSubs(id);
   { const offs=Array.isArray(t.dlReminds)?t.dlReminds.map(Number):[]; document.querySelectorAll(".dlRemBox").forEach(b=>b.checked=offs.includes(parseInt(b.value))); }
   { const sp=$("#estSpent"); const sec=t.timeSpentSec||0;
@@ -1523,6 +1585,7 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.title=$("#mName").value.trim()||t.title; t.notes=$("#mNotes").value.trim();
   t.category=$("#mCat").value.trim(); t.due=$("#mDue").value; t.deadline=$("#mDeadline").value; t.inbox=false;
   { const offs=[]; document.querySelectorAll(".dlRemBox").forEach(b=>{ if(b.checked) offs.push(parseInt(b.value)); }); t.dlReminds=offs; t.remindedMs=[]; }
+  t.attach = editAttach.map(a=>({...a}));
   { const tot=curEstMin(); t.estimate=tot?String(tot):""; } t.energy=$("#mEnergy").value;
   t.horizon=$("#mHorizon").value; t.recur=$("#mRecur").value;
   t.recurOrd=parseInt($("#mRecurOrd").value); t.recurDow=parseInt($("#mRecurDow").value);
@@ -1544,6 +1607,11 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
 $("#mDelete").onclick=()=>{ if(confirm("Delete this task?")){ const t=tasks.find(x=>x.id===editId); if(t){ t.deleted=true; touch(t); const did=t.id; save(); closeModal(); render();
   toast("Task deleted", "Undo", ()=>{ const tt=tasks.find(x=>x.id===did); if(tt){ tt.deleted=false; touch(tt); save(); render(); } }); } } };
 $("#mUpdateProgress").onclick=()=>{ const id=editId; closeModal(); openComplete(id); };
+$("#mAttachLinkBtn").onclick=addAttachLink;
+$("#mAttachUrl").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); addAttachLink(); } });
+$("#mAttachPhotoBtn").onclick=()=>$("#mAttachFile").click();
+$("#mAttachFile").onchange=e=>{ if(e.target.files&&e.target.files[0]) addAttachPhoto(e.target.files[0]); e.target.value=""; };
+$("#mBreakBtn").onclick=breakdownTask;
 $("#mCancel").onclick=closeModal;
 function closeModal(){ $("#modal").classList.remove("show"); editId=null; }
 
@@ -1859,7 +1927,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 51"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 52"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
