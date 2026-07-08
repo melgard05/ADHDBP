@@ -163,8 +163,13 @@
   .focus-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .timer{font-size:42px;font-weight:800;letter-spacing:-.02em;margin:8px 0;font-variant-numeric:tabular-nums}
   .timer-row{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
-  #modal,#chase,#tpl,#complete,#recap,#settings,#qnote,#bdump,#worry{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;align-items:flex-start;justify-items:center;padding:20px;overflow:auto}
-  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show,#qnote.show,#bdump.show,#worry.show{display:grid}
+  #modal,#chase,#tpl,#complete,#recap,#settings,#qnote,#bdump,#worry,#ideas{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;align-items:flex-start;justify-items:center;padding:20px;overflow:auto}
+  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show,#qnote.show,#bdump.show,#worry.show,#ideas.show{display:grid}
+  .idea-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .idea-row.done .idea-text{text-decoration:line-through;color:var(--muted)}
+  .idea-text{flex:1;font-size:14px;line-height:1.4;white-space:pre-wrap}
+  .idea-when{font-size:11px;color:var(--muted);margin-top:2px}
+  .idea-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:2px 6px}
   .cap-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .cap-tools button{font-size:12.5px;padding:6px 12px}
   #bdump textarea,#worry textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:10px;padding:10px;font-family:inherit;font-size:15px;resize:vertical}
@@ -278,12 +283,13 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 52</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 53</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
         <button class="btn-ghost" id="pickBtn" title="Pick one task for me">&#127922; Pick one</button>
         <button class="btn-ghost" id="recapBtn" title="What I finished this week">&#128202; Week</button>
+        <button class="btn-ghost" id="ideasBtn" title="Log changes/ideas for the app">&#128161; Ideas</button>
         <button class="btn-ghost" id="settingsBtn" title="Settings &amp; tools">&#9881; Settings</button>
       </div>
     </div>
@@ -584,9 +590,23 @@
   </div>
 </div>
 
+<div id="ideas">
+  <div class="sheet">
+    <h3 class="sheet-h-sticky">💡 Ideas &amp; changes <small>separate from your tasks</small><button id="ideasX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <div class="sheet-body">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input id="ideaInput" placeholder="A change or idea for the app…" style="flex:1">
+        <button class="btn-primary" id="ideaAdd">Add</button>
+      </div>
+      <div id="ideaList"></div>
+    </div>
+    <div class="sheet-foot"><span style="font-size:12px;color:var(--muted)">Synced across your devices.</span><button class="btn-primary" id="ideasClose">Done</button></div>
+  </div>
+</div>
+
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 52</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 53</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -733,6 +753,25 @@ function saveTpl(){ try{ localStorage.setItem(TKEY,JSON.stringify(templates)); }
 
 /* ---- sync (Firebase direct OR Worker proxy) ---- */
 const fbEnabled=()=>!!(FB.proxyURL||FB.databaseURL);
+/* ---- ideas & changes (separate from tasks, synced) ---- */
+const IDEAS_URL=()=>FB.databaseURL.replace(/\/$/,"")+"/td_ideas.json";
+let ideas=[];
+function loadIdeas(){ try{ const r=localStorage.getItem("td_ideas"); ideas=r?JSON.parse(r):[]; }catch(e){ ideas=[]; } if(!Array.isArray(ideas)) ideas=[]; }
+function persistIdeas(){ try{ localStorage.setItem("td_ideas",JSON.stringify(ideas)); }catch(e){}
+  if(fbEnabled()){ try{ fetch(IDEAS_URL(),{method:"PUT",body:JSON.stringify(ideas)}).catch(()=>{}); }catch(e){} } }
+async function pullIdeas(){ if(!fbEnabled())return; try{ const r=await fetch(IDEAS_URL(),{cache:"no-store"}); if(!r.ok)return; const d=await r.json();
+  if(Array.isArray(d)){ ideas=d; try{ localStorage.setItem("td_ideas",JSON.stringify(ideas)); }catch(e){} if($("#ideas") && $("#ideas").classList.contains("show")) renderIdeas(); } }catch(e){} }
+function renderIdeas(){ const box=$("#ideaList"); if(!box) return;
+  const open=ideas.filter(i=>!i.done), done=ideas.filter(i=>i.done);
+  if(!ideas.length){ box.innerHTML='<div class="set-note" style="margin:0">No ideas logged yet. Jot anything you\'d like changed or added.</div>'; return; }
+  const rowHtml=(i,idx)=>'<div class="idea-row'+(i.done?" done":"")+'"><input type="checkbox" '+(i.done?"checked":"")+' data-i="'+idx+'"><div style="flex:1"><div class="idea-text">'+esc(i.text)+'</div><div class="idea-when">'+(i.ts?new Date(i.ts).toLocaleDateString(undefined,{month:"short",day:"numeric"}):"")+'</div></div><button class="idea-del" data-del="'+idx+'" title="Delete">&#10005;</button></div>';
+  box.innerHTML = open.map(i=>rowHtml(i,ideas.indexOf(i))).join("") +
+    (done.length?'<div class="set-note" style="margin:12px 0 4px">Done ('+done.length+')</div>'+done.map(i=>rowHtml(i,ideas.indexOf(i))).join(""):"");
+  box.querySelectorAll('input[type="checkbox"]').forEach(c=>c.onchange=()=>{ const i=parseInt(c.dataset.i); if(ideas[i]){ ideas[i].done=c.checked; persistIdeas(); renderIdeas(); } });
+  box.querySelectorAll('.idea-del').forEach(b=>b.onclick=()=>{ const i=parseInt(b.dataset.del); if(ideas[i]){ ideas.splice(i,1); persistIdeas(); renderIdeas(); } });
+}
+function addIdea(){ const inp=$("#ideaInput"); const v=inp.value.trim(); if(!v) return;
+  ideas.unshift({text:v, done:false, ts:now()}); persistIdeas(); inp.value=""; renderIdeas(); inp.focus(); }
 function endpoint(){
   if(FB.proxyURL) return FB.proxyURL.replace(/\/+$/,"")+"/tasks";
   let u=FB.databaseURL.replace(/\/+$/,"")+"/"+FB.path+".json"; if(FB.auth)u+="?auth="+encodeURIComponent(FB.auth); return u;
@@ -1831,6 +1870,12 @@ function updateSettings(){
       : "No mood check-ins yet. Tapping the mood toggle (Low / Steady / High) logs the day."; }
 }
 $("#settingsBtn").onclick=()=>{ initQuietUI(); renderTrash(); updateSettings(); $("#settings").classList.add("show"); $("#settings").scrollTop=0; };
+$("#ideasBtn").onclick=()=>{ renderIdeas(); pullIdeas(); $("#ideas").classList.add("show"); $("#ideas").scrollTop=0; setTimeout(()=>$("#ideaInput").focus(),50); };
+$("#ideasClose").onclick=()=>$("#ideas").classList.remove("show");
+$("#ideasX").onclick=()=>$("#ideas").classList.remove("show");
+$("#ideas").onclick=e=>{ if(e.target.id==="ideas") $("#ideas").classList.remove("show"); };
+$("#ideaAdd").onclick=addIdea;
+$("#ideaInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); addIdea(); } });
 $("#pushBtn").onclick=enablePush;
 $("#setX").onclick=()=>$("#settings").classList.remove("show");
 $("#setWorkerUrl").onchange=()=>{ const v=$("#setWorkerUrl").value.trim().replace(/\/$/,""); PUSH.workerURL=v;
@@ -1900,7 +1945,7 @@ $("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.d
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
 document.querySelectorAll("#modebar button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 document.querySelectorAll("#locToggle button").forEach(b=>b.onclick=()=>setLoc(b.dataset.l));
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); $("#settings").classList.remove("show"); $("#qnote").classList.remove("show"); $("#bdump").classList.remove("show"); $("#worry").classList.remove("show"); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); $("#settings").classList.remove("show"); $("#qnote").classList.remove("show"); $("#bdump").classList.remove("show"); $("#worry").classList.remove("show"); $("#ideas").classList.remove("show"); } });
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkReminders(); syncPull(); } });
 (function(){ let ticking=false; const btn=$("#toTop");
   btn.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
@@ -1923,11 +1968,11 @@ if(!live().length && persistent && !fbEnabled()){
 
 /* ---- boot ---- */
 document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l===locView));
-setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(); ensurePushSub(); maybeResetFilters(); markActivity();
+setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(); ensurePushSub(); maybeResetFilters(); markActivity(); loadIdeas(); pullIdeas();
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 52"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 53"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
@@ -1957,12 +2002,12 @@ async function checkForUpdate(){
 setTimeout(checkForUpdate, 4000);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkForUpdate(); });
 function anyOverlayOpen(){
-  const sels=["#modal","#chase","#tpl","#complete","#recap","#settings","#qnote","#bdump","#worry","#focus"];
+  const sels=["#modal","#chase","#tpl","#complete","#recap","#settings","#qnote","#bdump","#worry","#focus","#ideas"];
   return sels.some(s=>{ const el=$(s); return el && el.classList.contains("show"); });
 }
 function closeTopOverlay(){
   if(typeof closeModal==="function" && $("#modal") && $("#modal").classList.contains("show")){ closeModal(); return true; }
-  const order=["#qnote","#bdump","#worry","#complete","#chase","#tpl","#recap","#settings"];
+  const order=["#qnote","#bdump","#worry","#ideas","#complete","#chase","#tpl","#recap","#settings"];
   for(const s of order){ const el=$(s); if(el && el.classList.contains("show")){ el.classList.remove("show"); return true; } }
   if($("#focus") && $("#focus").classList.contains("show")){ if(typeof closeFocus==="function") closeFocus(); else $("#focus").classList.remove("show"); return true; }
   return false;
