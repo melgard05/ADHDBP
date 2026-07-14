@@ -283,7 +283,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 53</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 54</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -418,7 +418,7 @@
       </div>
       <div class="grid2" id="waitWrap" style="display:none">
         <div class="field"><label>Waiting on</label><input id="mWaitOn" placeholder="Who / what"></div>
-        <div class="field"><label>Since</label><input id="mWaitSince" type="date"></div>
+        <div class="field"><label>Since</label><input id="mWaitSince" type="date"><div id="mWaitSinceDow" class="dow-hint"></div></div>
       </div>
       <div class="field"><label>Location (check all that apply)</label>
         <div id="mLocChecks" style="display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center">
@@ -567,7 +567,7 @@
           <div class="seg" id="cPriority">
             <button type="button" data-v="high">High</button><button type="button" data-v="medium">Med</button><button type="button" data-v="low">Low</button>
           </div></div>
-        <div class="field"><label>Reminder — set, change, or clear</label><input id="cRemind" type="datetime-local"></div>
+        <div class="field"><label>Reminder — set, change, or clear</label><input id="cRemind" type="datetime-local"><div id="cRemindDow" class="dow-hint"></div></div>
       </div>
     </div>
     <div class="sheet-foot"><span></span>
@@ -606,7 +606,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 53</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 54</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -1490,12 +1490,21 @@ function initQuietUI(){
 
 /* ---- edit modal ---- */
 function dueDowText(v){ if(!v) return "";
-  const d=new Date(v); if(isNaN(d)) return "";
+  const d=new Date(v.length<=10 ? v+"T00:00:00" : v); if(isNaN(d)) return "";
   const wd=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];
   const weekend=(d.getDay()===0||d.getDay()===6);
-  return {text:wd+(weekend?" — weekend":""), weekend:weekend}; }
+  const a=new Date(d); a.setHours(0,0,0,0); const b=new Date(); b.setHours(0,0,0,0);
+  const n=Math.round((a.getTime()-b.getTime())/86400000);
+  let rel; if(n===0) rel="today"; else if(n===1) rel="tomorrow"; else if(n===-1) rel="yesterday";
+    else if(n>1) rel="in "+n+" days"; else rel=(-n)+" days ago";
+  const dt=d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  return {text:wd+", "+dt+" · "+rel+(weekend?" · weekend":""), weekend:weekend}; }
+function refreshWaitSinceDow(){ const el=$("#mWaitSinceDow"); if(!el) return; const r=dueDowText($("#mWaitSince").value);
+  if(!r){ el.textContent=""; } else { el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--accent)"; } }
+function refreshCRemindDow(){ const el=$("#cRemindDow"); if(!el) return; const r=dueDowText($("#cRemind").value);
+  if(!r){ el.textContent=""; } else { el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--accent)"; } }
 function refreshDueDow(){ const r=dueDowText($("#mDue").value); const el=$("#mDueDow");
-  if(!r){ el.textContent=""; } else { el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--muted)"; }
+  if(!r){ el.textContent=""; } else { el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--accent)"; }
   const g=$("#mGcal"), due=$("#mDue").value;
   if(due){ g.href=gcalUrl({title:$("#mName").value,due:due,notes:$("#mNotes").value,estimate:curEstMin()}); g.style.display="inline-block"; }
   else g.style.display="none"; }
@@ -1559,9 +1568,12 @@ function refreshDeadlineDow(){ const v=$("#mDeadline").value; const el=$("#mDead
   if(!v){ el.textContent=""; return; }
   const n=daysUntil(v); const d=dlDate(v); if(!d){ el.textContent=""; return; }
   const wd=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];
-  const tm=dlTimeStr(v); let s=wd+(tm?" at "+tm:"");
+  const weekend=(d.getDay()===0||d.getDay()===6);
+  const dt=d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  const tm=dlTimeStr(v); let s=wd+", "+dt+(tm?" at "+tm:"");
   if(n<0) s+=" · "+(-n)+" days ago"; else if(n===0) s+=" · today"; else if(n===1) s+=" · tomorrow"; else s+=" · in "+n+" days";
-  el.textContent=s; el.style.color=(n!=null&&n<=1)?"var(--hi)":"var(--muted)"; }
+  if(weekend) s+=" · weekend";
+  el.textContent=s; el.style.color=(n!=null&&n<=1)?"var(--hi)":"var(--accent)"; }
 let editId=null;
 function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return;
   $("#mName").value=t.title; $("#mNotes").value=t.notes||"";
@@ -1589,7 +1601,7 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   { const up=$("#mUpdateProgress"); if(up) up.style.display = (t.status==="done") ? "none" : "block"; }
   editAttach = Array.isArray(t.attach) ? t.attach.map(a=>({...a})) : []; renderAttach();
   { const bd=$("#mBreakdown"); if(bd){ bd.style.display="none"; bd.innerHTML=""; } }
-  refreshDueDow(); refreshDeadlineDow(); refreshNthWrap(); renderSubs(id);
+  refreshDueDow(); refreshDeadlineDow(); refreshWaitSinceDow(); refreshNthWrap(); renderSubs(id);
   { const offs=Array.isArray(t.dlReminds)?t.dlReminds.map(Number):[]; document.querySelectorAll(".dlRemBox").forEach(b=>b.checked=offs.includes(parseInt(b.value))); }
   { const sp=$("#estSpent"); const sec=t.timeSpentSec||0;
     if(sec>=60){ sp.style.display="block"; sp.innerHTML="⏱ Focus time logged so far: <b>"+fmtMin(Math.round(sec/60))+"</b>"+((parseInt(t.estimate)||0)?(" of ~"+fmtMin(t.estimate)+" estimated"):""); }
@@ -1609,6 +1621,10 @@ $("#mDue").addEventListener("change",refreshDueDow);
 $("#mDue").addEventListener("input",refreshDueDow);
 $("#mDeadline").addEventListener("change",refreshDeadlineDow);
 $("#mDeadline").addEventListener("input",refreshDeadlineDow);
+$("#mWaitSince").addEventListener("change",refreshWaitSinceDow);
+$("#mWaitSince").addEventListener("input",refreshWaitSinceDow);
+$("#cRemind").addEventListener("change",refreshCRemindDow);
+$("#cRemind").addEventListener("input",refreshCRemindDow);
 $("#mSubAddBtn").onclick=()=>{ const v=$("#mSubAdd").value.trim(); if(!v||!editId)return;
   const par=tasks.find(x=>x.id===editId); const pr=par?par.priority:"medium";
   const sub=newTask({title:v,parentId:editId,priority:pr,horizon:"now",status:"todo"}); tasks.unshift(sub);
@@ -1687,7 +1703,7 @@ function openComplete(id){ completeId=id; const t=tasks.find(x=>x.id===id); if(!
   setSeg("#cNext","doing"); $("#cWaitWrap").style.display="none";
   $("#cWaitOn").value=t.waitOn||"";
   setSeg("#cPriority", t.priority||"medium");
-  $("#cRemind").value=t.due||"";
+  $("#cRemind").value=t.due||""; refreshCRemindDow();
   updateDoneEnable();
   $("#complete").classList.add("show"); setTimeout(()=>$("#cDid").focus(),50); }
 document.querySelectorAll("#cChips button").forEach(b=>b.onclick=()=>{ const was=b.classList.contains("sel");
@@ -1972,7 +1988,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 53"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 54"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
