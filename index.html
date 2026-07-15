@@ -283,7 +283,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 54</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 55</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -606,7 +606,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 54</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 55</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -2010,7 +2010,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 54"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 55"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
