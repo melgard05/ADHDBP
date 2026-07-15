@@ -729,6 +729,28 @@ const PUSH = {
 };
 try{ const _wu=localStorage.getItem("td_workerurl"); if(_wu) PUSH.workerURL=_wu; }catch(e){}
 
+/* ---- database sign-in (locked DB requires auth) ---- */
+const AUTH = {
+  API_KEY:  "AIzaSyB0yZTItBQZfeTuGGsOQBfP8D0GzmP-VjQ",
+  EMAIL:    "melgard05@gmail.com",
+  PASSWORD: "Garbage1"
+};
+const AUTH_ON = !!(AUTH.API_KEY && AUTH.EMAIL && AUTH.PASSWORD);
+let idToken="", refreshToken="", tokenExp=0;
+async function ensureAuth(){
+  if(!AUTH_ON) return;
+  if(idToken && Date.now() < tokenExp-60000) return;
+  try{
+    if(refreshToken){
+      const r=await fetch("https://securetoken.googleapis.com/v1/token?key="+AUTH.API_KEY,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"grant_type=refresh_token&refresh_token="+encodeURIComponent(refreshToken)});
+      if(r.ok){ const j=await r.json(); idToken=j.id_token; refreshToken=j.refresh_token; tokenExp=Date.now()+(parseInt(j.expires_in,10)||3600)*1000; return; }
+    }
+    const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+AUTH.API_KEY,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:AUTH.EMAIL,password:AUTH.PASSWORD,returnSecureToken:true})});
+    if(r.ok){ const j=await r.json(); idToken=j.idToken; refreshToken=j.refreshToken; tokenExp=Date.now()+(parseInt(j.expiresIn,10)||3600)*1000; }
+  }catch(e){}
+}
+function authQ(){ return idToken?("?auth="+encodeURIComponent(idToken)):""; }
+
 /* ---- storage ---- */
 const KEY="taskdesk_v1", MKEY="taskdesk_mode", TKEY="taskdesk_templates", LKEY="taskdesk_loc";
 let memCache=null, persistent=true;
@@ -754,12 +776,12 @@ function saveTpl(){ try{ localStorage.setItem(TKEY,JSON.stringify(templates)); }
 /* ---- sync (Firebase direct OR Worker proxy) ---- */
 const fbEnabled=()=>!!(FB.proxyURL||FB.databaseURL);
 /* ---- ideas & changes (separate from tasks, synced) ---- */
-const IDEAS_URL=()=>FB.databaseURL.replace(/\/$/,"")+"/td_ideas.json";
+const IDEAS_URL=()=>FB.databaseURL.replace(/\/$/,"")+"/td_ideas.json"+authQ();
 let ideas=[];
 function loadIdeas(){ try{ const r=localStorage.getItem("td_ideas"); ideas=r?JSON.parse(r):[]; }catch(e){ ideas=[]; } if(!Array.isArray(ideas)) ideas=[]; }
 function persistIdeas(){ try{ localStorage.setItem("td_ideas",JSON.stringify(ideas)); }catch(e){}
-  if(fbEnabled()){ try{ fetch(IDEAS_URL(),{method:"PUT",body:JSON.stringify(ideas)}).catch(()=>{}); }catch(e){} } }
-async function pullIdeas(){ if(!fbEnabled())return; try{ const r=await fetch(IDEAS_URL(),{cache:"no-store"}); if(!r.ok)return; const d=await r.json();
+  if(fbEnabled()){ try{ ensureAuth().then(()=>fetch(IDEAS_URL(),{method:"PUT",body:JSON.stringify(ideas)}).catch(()=>{})); }catch(e){} } }
+async function pullIdeas(){ if(!fbEnabled())return; await ensureAuth(); try{ const r=await fetch(IDEAS_URL(),{cache:"no-store"}); if(!r.ok)return; const d=await r.json();
   if(Array.isArray(d)){ ideas=d; try{ localStorage.setItem("td_ideas",JSON.stringify(ideas)); }catch(e){} if($("#ideas") && $("#ideas").classList.contains("show")) renderIdeas(); } }catch(e){} }
 function renderIdeas(){ const box=$("#ideaList"); if(!box) return;
   const open=ideas.filter(i=>!i.done), done=ideas.filter(i=>i.done);
@@ -774,16 +796,16 @@ function addIdea(){ const inp=$("#ideaInput"); const v=inp.value.trim(); if(!v) 
   ideas.unshift({text:v, done:false, ts:now()}); persistIdeas(); inp.value=""; renderIdeas(); inp.focus(); }
 function endpoint(){
   if(FB.proxyURL) return FB.proxyURL.replace(/\/+$/,"")+"/tasks";
-  let u=FB.databaseURL.replace(/\/+$/,"")+"/"+FB.path+".json"; if(FB.auth)u+="?auth="+encodeURIComponent(FB.auth); return u;
+  let u=FB.databaseURL.replace(/\/+$/,"")+"/"+FB.path+".json"; const tk=idToken||FB.auth; if(tk)u+="?auth="+encodeURIComponent(tk); return u;
 }
 function fbHeaders(extra){ const h=Object.assign({},extra||{}); if(FB.proxyURL&&FB.proxyToken)h["X-TD-Key"]=FB.proxyToken; return h; }
-async function fbPull(){ if(!fbEnabled())return null;
+async function fbPull(){ if(!fbEnabled())return null; await ensureAuth();
   try{ const r=await fetch(endpoint(),{cache:"no-store",headers:fbHeaders()}); if(!r.ok)throw 0;
     const d=await r.json(); lastSyncOk=now(); syncState="ok"; return Array.isArray(d)?d:(d?Object.values(d):[]); }
   catch(e){ syncState="offline"; syncNote(); return null; } }
 let pushTimer=null;
 function fbPushDebounced(){ if(!fbEnabled())return; syncState="saving"; syncNote(); clearTimeout(pushTimer);
-  pushTimer=setTimeout(async()=>{ try{ const r=await fetch(endpoint(),{method:"PUT",headers:fbHeaders({"Content-Type":"application/json"}),body:JSON.stringify(tasks)});
+  pushTimer=setTimeout(async()=>{ await ensureAuth(); try{ const r=await fetch(endpoint(),{method:"PUT",headers:fbHeaders({"Content-Type":"application/json"}),body:JSON.stringify(tasks)});
     if(r.ok){ lastSyncOk=now(); syncState="ok"; } else syncState="offline"; syncNote(); }catch(e){ syncState="offline"; syncNote(); } },800); }
 function mergeRemote(remote){ if(!remote)return false;
   const map=new Map(); tasks.forEach(t=>map.set(t.id,t)); let changed=false;
