@@ -66,6 +66,8 @@ self.addEventListener("push", e => {
       });
     }
     // Otherwise it's a silent ping from the Worker — look up what's due right now.
+    let shown = false;
+    const fallback = () => { if (!shown) { shown = true; return self.registration.showNotification("ADHDBP Control Panel", { body: "You have a reminder — tap to open your board.", tag: "td-reminder", icon: "icon-192.png", badge: "badge.png" }); } };
     try {
       // Morning summary signal?
       try {
@@ -86,6 +88,7 @@ self.addEventListener("push", e => {
             bits.push(dueToday + " due today");
             if (overdue) bits.push(overdue + " overdue");
             if (starred) bits.push(starred + " starred");
+            shown = true;
             return self.registration.showNotification("Good morning \u2600\uFE0F", {
               body: bits.join(" \u00B7 ") + ". Tap to open your board.",
               tag: "morning-summary", icon: "icon-192.png", badge: "badge.png"
@@ -94,7 +97,7 @@ self.addEventListener("push", e => {
         }
       } catch (_) {}
       const r = await fetch(FB_URL + "/" + FB_PATH + ".json", { cache: "no-store" });
-      if (!r.ok) return;
+      if (!r.ok) { return fallback(); }
       const d = await r.json();
       const tasks = Array.isArray(d) ? d : (d ? Object.values(d) : []);
       const now = Date.now();
@@ -103,13 +106,18 @@ self.addEventListener("push", e => {
         (Array.isArray(t.remindMs) && t.remindMs.some(ms => ms <= now))
       ));
       if (!due.length) {
+        shown = true;
         return self.registration.showNotification("ADHDBP Control Panel", { body: "Checked your reminders — nothing due right now.", tag: "td-check", icon: "icon-192.png", badge: "badge.png" });
       }
       for (const t of due.slice(0, 6)) {
+        shown = true;
         await self.registration.showNotification(t.status === "waiting" ? "Time to follow up" : "Reminder", {
           body: t.title, tag: t.id, icon: "icon-192.png", badge: "badge.png"
         });
       }
-    } catch (_) {}
+    } catch (_) {
+      return fallback();
+    }
+    return fallback();
   })());
 });
