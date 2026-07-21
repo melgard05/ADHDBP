@@ -35,6 +35,12 @@
   .brand{font-size:20px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   .brand small{font-weight:600;color:var(--muted);font-size:12px;letter-spacing:0}
   .done-chip{font-size:12px;font-weight:700;color:var(--done);background:#EAF7F1;border-radius:999px;padding:3px 10px;align-self:center}
+  .sync-light{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:middle;background:#CBD5E1;cursor:pointer}
+  .sync-light.sl-ok{background:#22C55E;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+  .sync-light.sl-saving{background:#F59E0B;animation:slpulse 1s ease-in-out infinite}
+  .sync-light.sl-off{background:#EF4444;box-shadow:0 0 0 3px rgba(239,68,68,.18)}
+  .sync-light.sl-idle{background:#CBD5E1}
+  @keyframes slpulse{0%,100%{opacity:1}50%{opacity:.35}}
   .topbar .tools{display:flex;gap:8px;flex-wrap:wrap}
   .capture{display:flex;gap:8px;background:var(--panel);border:1px solid var(--line);
     border-radius:var(--radius);padding:8px;box-shadow:var(--shadow)}
@@ -99,6 +105,9 @@
   .update-bar .ub-go{margin-left:auto;background:var(--accent);border:none;color:#fff;font-weight:700;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px}
   .update-bar .ub-x{background:transparent;border:none;color:#1E3A8A;cursor:pointer;font-size:16px;padding:2px 6px}
   .dow-hint{font-size:13px;font-weight:700;margin-top:4px;min-height:16px;color:var(--accent)}
+  .day-chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px}
+  .day-chip{flex:0 0 auto;font-size:12.5px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;white-space:nowrap}
+  .day-chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   .dlrem-row{display:flex;flex-wrap:wrap;gap:6px}
   .dlrem-row label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 10px;cursor:pointer}
   .dlrem-row input{margin:0}
@@ -283,7 +292,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand">ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 55</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 57</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -398,7 +407,7 @@
       <div class="field"><label>Promised to help (who)</label><input id="mHelp" placeholder="Person you committed to (optional)"></div>
       <div class="grid2">
         <div class="field"><label>Category</label><input id="mCat" list="catList" placeholder="e.g. Steve's, Cards, Home"><datalist id="catList"></datalist></div>
-        <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDow" class="dow-hint"></div><a id="mGcal" class="gcal-link" href="#" target="_blank" rel="noopener" style="display:none">📅 Add to Google Calendar</a></div>
+        <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDays" class="day-chips"></div><div id="mDueDow" class="dow-hint"></div><a id="mGcal" class="gcal-link" href="#" target="_blank" rel="noopener" style="display:none">📅 Add to Google Calendar</a></div>
       </div>
       <div class="field"><label>Deadline — must finish by</label><input id="mDeadline" type="datetime-local"><div id="mDeadlineDow" class="dow-hint"></div>
         <div style="margin-top:8px"><label style="font-size:12.5px;color:var(--muted);display:block;margin-bottom:4px">Remind me before the deadline:</label>
@@ -606,7 +615,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 55</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 57</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -834,8 +843,16 @@ function taskLocs(t){ if(Array.isArray(t.locs)) return t.locs.filter(Boolean); r
 function locLabel(v){ return {work:"📍 work",home:"🏠 home",cabin:"🌲 cabin",newhouse:"🏡 new house"}[v] || ("📌 "+v); }
 const prRank={high:0,medium:1,low:2};
 let syncState=null, lastSyncOk=null;
-function syncNote(){ const el=$("#storeNote"); if(!el)return;
-  if(!fbEnabled()){ el.textContent = persistent ? "saved on this device" : "preview mode — won't persist here"; el.style.color="var(--muted)"; return; }
+function setSyncLight(state){ const l=$("#syncLight"); if(!l) return;
+  l.classList.remove("sl-ok","sl-saving","sl-off","sl-idle");
+  if(state==="ok"){ l.classList.add("sl-ok"); l.title="Synced"; }
+  else if(state==="saving"){ l.classList.add("sl-saving"); l.title="Saving…"; }
+  else if(state==="offline"){ l.classList.add("sl-off"); l.title="Can't reach sync — tap to retry"; }
+  else { l.classList.add("sl-idle"); l.title="Connecting…"; } }
+function syncNote(){ const el=$("#storeNote");
+  if(!fbEnabled()){ setSyncLight("idle"); if(el){ el.textContent = persistent ? "saved on this device" : "preview mode — won't persist here"; el.style.color="var(--muted)"; } return; }
+  setSyncLight(syncState==="ok"?"ok":syncState==="saving"?"saving":syncState==="offline"?"offline":"idle");
+  if(!el) return;
   if(syncState==="saving"){ el.textContent="saving…"; el.style.color="var(--muted)"; }
   else if(syncState==="offline"){ el.textContent="⚠ can't reach sync — tap to retry"; el.style.color="var(--hi)"; }
   else if(syncState==="ok"){ const t=new Date(lastSyncOk); el.textContent="✓ synced "+t.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})+" · tap to refresh"; el.style.color="var(--done)"; }
@@ -1504,6 +1521,18 @@ function refreshWaitSinceDow(){ const el=$("#mWaitSinceDow"); if(!el) return; co
   if(!r){ el.textContent=""; } else { el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--accent)"; } }
 function refreshCRemindDow(){ const el=$("#cRemindDow"); if(!el) return; const r=dueDowText($("#cRemind").value);
   if(!r){ el.textContent=""; } else { el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--accent)"; } }
+function setDueDay(d){ const cur=$("#mDue").value; let hh="09", mm="00";
+  if(cur && cur.length>=16){ hh=cur.slice(11,13); mm=cur.slice(14,16); }
+  const y=d.getFullYear(), mo=String(d.getMonth()+1).padStart(2,"0"), da=String(d.getDate()).padStart(2,"0");
+  $("#mDue").value=y+"-"+mo+"-"+da+"T"+hh+":"+mm; refreshDueDow(); buildDueDays(); }
+function buildDueDays(){ const box=$("#mDueDays"); if(!box) return; box.innerHTML="";
+  const today=new Date(); today.setHours(0,0,0,0);
+  const cur=$("#mDue").value; const curDay=(cur&&cur.length>=10)?cur.slice(0,10):"";
+  for(let i=0;i<7;i++){ const d=new Date(today); d.setDate(d.getDate()+i);
+    const label=i===0?"Today":i===1?"Tomorrow":d.toLocaleDateString(undefined,{weekday:"short"})+" "+d.getDate();
+    const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    const b=document.createElement("button"); b.type="button"; b.className="day-chip"+(curDay===iso?" on":"");
+    b.textContent=label; b.onclick=()=>setDueDay(d); box.appendChild(b); } }
 function refreshDueDow(){ const r=dueDowText($("#mDue").value); const el=$("#mDueDow");
   if(!r){ el.textContent=""; } else { el.textContent=r.text; el.style.color=r.weekend?"var(--hi)":"var(--accent)"; }
   const g=$("#mGcal"), due=$("#mDue").value;
@@ -1602,7 +1631,7 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   { const up=$("#mUpdateProgress"); if(up) up.style.display = (t.status==="done") ? "none" : "block"; }
   editAttach = Array.isArray(t.attach) ? t.attach.map(a=>({...a})) : []; renderAttach();
   { const bd=$("#mBreakdown"); if(bd){ bd.style.display="none"; bd.innerHTML=""; } }
-  refreshDueDow(); refreshDeadlineDow(); refreshWaitSinceDow(); refreshNthWrap(); renderSubs(id);
+  refreshDueDow(); refreshDeadlineDow(); refreshWaitSinceDow(); refreshNthWrap(); renderSubs(id); buildDueDays();
   { const offs=Array.isArray(t.dlReminds)?t.dlReminds.map(Number):[]; document.querySelectorAll(".dlRemBox").forEach(b=>b.checked=offs.includes(parseInt(b.value))); }
   { const sp=$("#estSpent"); const sec=t.timeSpentSec||0;
     if(sec>=60){ sp.style.display="block"; sp.innerHTML="⏱ Focus time logged so far: <b>"+fmtMin(Math.round(sec/60))+"</b>"+((parseInt(t.estimate)||0)?(" of ~"+fmtMin(t.estimate)+" estimated"):""); }
@@ -1965,10 +1994,12 @@ $("#recap").onclick=e=>{ if(e.target.id==="recap") $("#recap").classList.remove(
     try{ rec.start(); }catch(e){ toast("Voice input isn't available here."); } };
 })();
 $("#quickAdd").addEventListener("keydown",e=>{ if(e.key==="Enter")addQuick(); });
-$("#catFilter").onchange=render; $("#prFilter").onchange=render; $("#hideDone").onchange=render; $("#anxFilter").onchange=render; $("#promisedFilter").onchange=render;
+$("#catFilter").onchange=render; $("#prFilter").onchange=render; $("#hideDone").onchange=()=>{ try{localStorage.setItem("td_hidedone",$("#hideDone").checked?"1":"0");}catch(e){} render(); }; $("#anxFilter").onchange=render; $("#promisedFilter").onchange=render;
+try{ if(localStorage.getItem("td_hidedone")==="1") $("#hideDone").checked=true; }catch(e){}
 $("#sortBy").onchange=()=>{ try{localStorage.setItem("td_sort",$("#sortBy").value);}catch(e){} render(); };
 try{ const sv=localStorage.getItem("td_sort"); if(sv) $("#sortBy").value=sv; }catch(e){}
 $("#storeNote").onclick=()=>{ if(fbEnabled()){ syncState="saving"; syncNote(); syncPull(); fbPushDebounced(); } };
+$("#syncLight").onclick=()=>{ if(fbEnabled()){ syncState="saving"; syncNote(); syncPull(); fbPushDebounced(); toast("Refreshing sync…"); } };
 $("#search").addEventListener("input",()=>{ $("#searchClear").style.display=$("#search").value?"block":"none"; render(); });
 $("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.display="none"; render(); $("#search").focus(); };
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
@@ -2001,7 +2032,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 55"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 57"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
