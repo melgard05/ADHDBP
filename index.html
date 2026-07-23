@@ -314,7 +314,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 59</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 60</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -660,7 +660,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 59</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 60</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -783,33 +783,14 @@ const PUSH = {
   vapidPublic:"BJwEA0ejHEo0itwa6cB__ayHPpjq9v_FqN8ECcmhyMz2p-n-du5nRyLpJzuGE7lnmguksbSAlsWANqSqa5iM4DU"
 };
 try{ const _wu=localStorage.getItem("td_workerurl"); if(_wu) PUSH.workerURL=_wu; }catch(e){}
-/* ---- Work Task Board mirror (assigned-to-me tasks) ---- */
-const BOARD = {
-  url:"https://steves-taskboard-default-rtdb.firebaseio.com",
-  path:"steves_taskboard",
-  me:"Kelly",
-  auth:{ apiKey:"AIzaSyAvU9WEzhcG33j2nIa-HvLu67UqBKC5M78", email:"ssteleroute@gmail.com", password:"Steves4834" }
-};
-let bIdToken="", bRefresh="", bTokenExp=0;
-async function boardAuth(){
-  if(bIdToken && Date.now()<bTokenExp-60000) return;
-  try{
-    if(bRefresh){
-      const r=await fetch("https://securetoken.googleapis.com/v1/token?key="+BOARD.auth.apiKey,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"grant_type=refresh_token&refresh_token="+encodeURIComponent(bRefresh)});
-      if(r.ok){ const j=await r.json(); bIdToken=j.id_token; bRefresh=j.refresh_token; bTokenExp=Date.now()+(parseInt(j.expires_in,10)||3600)*1000; return; }
-    }
-    const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+BOARD.auth.apiKey,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:BOARD.auth.email,password:BOARD.auth.password,returnSecureToken:true})});
-    if(r.ok){ const j=await r.json(); bIdToken=j.idToken; bRefresh=j.refreshToken; bTokenExp=Date.now()+(parseInt(j.expiresIn,10)||3600)*1000; }
-    else { bIdToken=""; }
-  }catch(e){ bIdToken=""; }
-}
-function boardParam(){ return bIdToken?("?auth="+encodeURIComponent(bIdToken)):""; }
+/* ---- Work Task Board mirror (assigned-to-me tasks; credentials live in the Worker, not here) ---- */
+const BOARD = { me:"Kelly" };
 async function syncBoardTasks(){
   try{
-    await boardAuth();
-    const r=await fetch(BOARD.url.replace(/\/$/,"")+"/"+BOARD.path+"/tasks.json"+boardParam(),{cache:"no-store"});
+    if(!PUSH.workerURL) return;
+    const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/board/tasks",{cache:"no-store"});
     if(!r.ok) return;
-    const data=await r.json(); const bt=data?Object.values(data):[];
+    const j=await r.json(); const bt=(j&&j.tasks)||[];
     const mine=bt.filter(t=>t && t.status!=="done" && Array.isArray(t.assignees) && t.assignees.some(a=>a && a.name===BOARD.me));
     const mineIds=new Set(mine.map(t=>t.id));
     let changed=false;
@@ -829,14 +810,10 @@ async function syncBoardTasks(){
 async function completeOnBoard(m){
   if(!m || !m.boardId) return;
   try{
-    await boardAuth();
-    const u=BOARD.url.replace(/\/$/,"")+"/"+BOARD.path+"/tasks/"+m.boardId+".json"+boardParam();
-    const r=await fetch(u,{cache:"no-store"}); if(!r.ok){ toast("Couldn't reach the work board — complete it there when you can."); return; }
-    const bt2=await r.json(); if(!bt2){ return; }
-    bt2.status="done"; bt2.updatedAt=Date.now();
-    bt2.activity=Array.isArray(bt2.activity)?bt2.activity:[]; bt2.activity.push({by:BOARD.me, ts:Date.now(), text:"completed (via ADHDBP)"});
-    const w=await fetch(u,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(bt2)});
-    toast(w.ok?"Marked done on the work board ✓":"Couldn't update the work board — mark it done there.");
+    if(!PUSH.workerURL){ toast("Couldn't reach the work board — complete it there when you can."); return; }
+    const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/board/complete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:m.boardId, by:BOARD.me})});
+    const j=await r.json().catch(()=>({}));
+    toast((r.ok&&j.ok)?"Marked done on the work board ✓":"Couldn't update the work board — mark it done there.");
   }catch(e){ toast("Couldn't update the work board — mark it done there."); }
 }
 
@@ -2196,7 +2173,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 59"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 60"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
