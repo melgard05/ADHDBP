@@ -152,13 +152,14 @@ export default {
       return new Response(JSON.stringify({subscriptions:hosts.length, hosts}, null, 2),{headers:{...cors,"Content-Type":"application/json"}});
     }
     if(url.pathname==="/breakdown" && req.method==="POST"){
-      if(!env.ANTHROPIC_API_KEY) return new Response(JSON.stringify({error:"no_key"}),{status:400,headers:{...cors,"Content-Type":"application/json"}});
+      const AKEY=env.ANTHROPIC_API_KEY||env.ANTHROPIC_API_KEY_ADHDBP;
+      if(!AKEY) return new Response(JSON.stringify({error:"no_key"}),{status:400,headers:{...cors,"Content-Type":"application/json"}});
       let body; try{ body=await req.json(); }catch(e){ return new Response(JSON.stringify({error:"bad"}),{status:400,headers:{...cors,"Content-Type":"application/json"}}); }
       const title=String(body.title||"").slice(0,300); const notes=String(body.notes||"").slice(0,600);
       const prompt="Break this task into 3 to 6 small, concrete, physical next-steps that someone with ADHD could start immediately. Each step: short (a few words), starts with a verb, one single action, in order. Task: \""+title+"\""+(notes?("\nContext: "+notes):"")+"\n\nReturn ONLY a JSON array of strings and nothing else.";
       try{
         const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
-          headers:{"x-api-key":env.ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"},
+          headers:{"x-api-key":AKEY,"anthropic-version":"2023-06-01","content-type":"application/json"},
           body:JSON.stringify({model:(env.ANTHROPIC_MODEL||"claude-haiku-4-5-20251001"),max_tokens:400,messages:[{role:"user",content:prompt}]})});
         const j=await r.json();
         let text=""; if(j && Array.isArray(j.content)) text=j.content.filter(b=>b.type==="text").map(b=>b.text).join("");
