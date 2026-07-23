@@ -314,7 +314,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 58</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 59</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -660,7 +660,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 58</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 59</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -783,6 +783,62 @@ const PUSH = {
   vapidPublic:"BJwEA0ejHEo0itwa6cB__ayHPpjq9v_FqN8ECcmhyMz2p-n-du5nRyLpJzuGE7lnmguksbSAlsWANqSqa5iM4DU"
 };
 try{ const _wu=localStorage.getItem("td_workerurl"); if(_wu) PUSH.workerURL=_wu; }catch(e){}
+/* ---- Work Task Board mirror (assigned-to-me tasks) ---- */
+const BOARD = {
+  url:"https://steves-taskboard-default-rtdb.firebaseio.com",
+  path:"steves_taskboard",
+  me:"Kelly",
+  auth:{ apiKey:"AIzaSyAvU9WEzhcG33j2nIa-HvLu67UqBKC5M78", email:"ssteleroute@gmail.com", password:"Steves4834" }
+};
+let bIdToken="", bRefresh="", bTokenExp=0;
+async function boardAuth(){
+  if(bIdToken && Date.now()<bTokenExp-60000) return;
+  try{
+    if(bRefresh){
+      const r=await fetch("https://securetoken.googleapis.com/v1/token?key="+BOARD.auth.apiKey,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"grant_type=refresh_token&refresh_token="+encodeURIComponent(bRefresh)});
+      if(r.ok){ const j=await r.json(); bIdToken=j.id_token; bRefresh=j.refresh_token; bTokenExp=Date.now()+(parseInt(j.expires_in,10)||3600)*1000; return; }
+    }
+    const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+BOARD.auth.apiKey,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:BOARD.auth.email,password:BOARD.auth.password,returnSecureToken:true})});
+    if(r.ok){ const j=await r.json(); bIdToken=j.idToken; bRefresh=j.refreshToken; bTokenExp=Date.now()+(parseInt(j.expiresIn,10)||3600)*1000; }
+    else { bIdToken=""; }
+  }catch(e){ bIdToken=""; }
+}
+function boardParam(){ return bIdToken?("?auth="+encodeURIComponent(bIdToken)):""; }
+async function syncBoardTasks(){
+  try{
+    await boardAuth();
+    const r=await fetch(BOARD.url.replace(/\/$/,"")+"/"+BOARD.path+"/tasks.json"+boardParam(),{cache:"no-store"});
+    if(!r.ok) return;
+    const data=await r.json(); const bt=data?Object.values(data):[];
+    const mine=bt.filter(t=>t && t.status!=="done" && Array.isArray(t.assignees) && t.assignees.some(a=>a && a.name===BOARD.me));
+    const mineIds=new Set(mine.map(t=>t.id));
+    let changed=false;
+    mine.forEach(bt2=>{
+      const num=bt2.seq?("T-"+String(bt2.seq).padStart(4,"0")+" "):"";
+      const title=num+(bt2.title||"(untitled)");
+      let m=tasks.find(x=>x.boardId===bt2.id && !x.deleted);
+      const due=(bt2.dueDate?bt2.dueDate+"T"+(bt2.dueTime||"09:00"):"");
+      if(!m){ m=newTask({title:title, category:"work board", notes:(bt2.description||""), priority:(bt2.priority>=3?"high":bt2.priority===2?"medium":"low"), due:due, deadline:due});
+        m.boardId=bt2.id; tasks.unshift(m); changed=true; }
+      else if(m.status!=="done" && m.title!==title){ m.title=title; changed=true; }
+    });
+    tasks.forEach(m=>{ if(m.boardId && !m.deleted && m.status!=="done" && !mineIds.has(m.boardId)){ m.deleted=true; changed=true; } });
+    if(changed){ save(); render(); }
+  }catch(e){}
+}
+async function completeOnBoard(m){
+  if(!m || !m.boardId) return;
+  try{
+    await boardAuth();
+    const u=BOARD.url.replace(/\/$/,"")+"/"+BOARD.path+"/tasks/"+m.boardId+".json"+boardParam();
+    const r=await fetch(u,{cache:"no-store"}); if(!r.ok){ toast("Couldn't reach the work board — complete it there when you can."); return; }
+    const bt2=await r.json(); if(!bt2){ return; }
+    bt2.status="done"; bt2.updatedAt=Date.now();
+    bt2.activity=Array.isArray(bt2.activity)?bt2.activity:[]; bt2.activity.push({by:BOARD.me, ts:Date.now(), text:"completed (via ADHDBP)"});
+    const w=await fetch(u,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(bt2)});
+    toast(w.ok?"Marked done on the work board ✓":"Couldn't update the work board — mark it done there.");
+  }catch(e){ toast("Couldn't update the work board — mark it done there."); }
+}
 
 /* ---- storage ---- */
 const KEY="taskdesk_v1", MKEY="taskdesk_mode", TKEY="taskdesk_templates", LKEY="taskdesk_loc";
@@ -1180,6 +1236,7 @@ function card(t){
   if(staleDays(t)>=7) tags.push('<span class="tag tag-stale">🕸 '+staleDays(t)+'d untouched</span>');
   if(isSnoozed(t)) tags.push('<span class="tag tag-snz">💤 snoozed</span>');
   { const ls=taskLocs(t); if(ls.length) tags.push('<span class="tag tag-loc">'+ls.map(locLabel).join(" · ")+'</span>'); }
+  if(t.boardId) tags.push('<span class="tag" style="background:#DBEAFE;color:#1D4ED8">🏢 work board</span>');
   if(Array.isArray(t.attach) && t.attach.length) tags.push('<span class="tag" style="background:#EEF2F7;color:#475569">📎 '+t.attach.length+'</span>');
   if(t.inbox) tags.push('<span class="tag" style="background:#EDE9FE;color:#6D28D9">🧠 inbox</span>');
   if(t.helpFor) tags.push('<span class="tag tag-help">🤝 for '+esc(t.helpFor)+'</span>');
@@ -1253,6 +1310,7 @@ function attachSwipe(el, t){
 }
 function quickDone(t){ t.status="done"; t.completedAt=now(); spawnRecur(t); touch(t); save();
   try{ if(navigator.vibrate) navigator.vibrate(30); }catch(e){} confetti(); render();
+  if(t.boardId && confirm("Also mark it done on the work task board?")) completeOnBoard(t);
   toast("Done ✓", "Undo", ()=>{ t.status="todo"; t.completedAt=null; touch(t); save(); render(); }); }
 function openDueMenu(e, t){ e.stopPropagation(); closeCardMenu();
   const base=t.due?new Date(t.due):new Date(); const setDue=(d)=>{ t.due=localDT(d); t.reminded=false; touch(t); save(); render(); toast("Reminder updated"); };
@@ -1790,7 +1848,7 @@ $("#mSave").onclick=()=>{ const t=tasks.find(x=>x.id===editId); if(!t)return;
   t.anxiety=$("#mAnx").checked; t.helpFor=$("#mHelp").value.trim();
   t.priority=getSeg("#mPr")||"medium";
   const ns=getSeg("#mStatus")||"todo";
-  if(ns==="done"&&t.status!=="done")t.completedAt=now();
+  if(ns==="done"&&t.status!=="done"){ t.completedAt=now(); if(t.boardId && confirm("Also mark it done on the work task board?")) completeOnBoard(t); }
   if(ns!=="done")t.completedAt=null; t.status=ns;
   t.waitOn=$("#mWaitOn").value.trim(); t.waitSince=$("#mWaitSince").value;
   if(t.status==="waiting"&&!t.waitSince)t.waitSince=todayStr();
@@ -1863,7 +1921,7 @@ $("#cSave").onclick=()=>{ const t=tasks.find(x=>x.id===completeId); if(!t)return
   t.priority=getSeg("#cPriority")||t.priority;
   t.due=$("#cRemind").value;
   if(!t.log)t.log=[]; t.log.push({t:now(),summary:summary,did:did,resume:resume,nextStep:nextStep,blocker:blocker,next:next});
-  if(next==="done"){ t.status="done"; t.completedAt=now(); spawnRecur(t); try{ if(navigator.vibrate) navigator.vibrate(30); }catch(e){} }
+  if(next==="done"){ t.status="done"; t.completedAt=now(); spawnRecur(t); try{ if(navigator.vibrate) navigator.vibrate(30); }catch(e){} if(t.boardId && confirm("Also mark it done on the work task board?")) completeOnBoard(t); }
   else if(next==="waiting"){ t.status="waiting"; if(!t.waitSince)t.waitSince=todayStr();
     t.waitOn=$("#cWaitOn").value.trim()||t.waitOn; if(!t.due)t.due=chaseDate(3); t.completedAt=null; }
   else { t.status=next; t.completedAt=null; }
@@ -2134,11 +2192,11 @@ if(!live().length && persistent && !fbEnabled()){
 
 /* ---- boot ---- */
 document.querySelectorAll("#locToggle button").forEach(b=>b.classList.toggle("sel",b.dataset.l===locView));
-setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(); ensurePushSub(); maybeResetFilters(); markActivity(); loadIdeas(); pullIdeas();
+setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(); ensurePushSub(); maybeResetFilters(); markActivity(); loadIdeas(); pullIdeas(); syncBoardTasks(); setInterval(syncBoardTasks, 120000);
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 58"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 59"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
