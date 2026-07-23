@@ -172,8 +172,30 @@
   .focus-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
   .timer{font-size:42px;font-weight:800;letter-spacing:-.02em;margin:8px 0;font-variant-numeric:tabular-nums}
   .timer-row{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
-  #modal,#chase,#tpl,#complete,#recap,#settings,#qnote,#bdump,#worry,#ideas{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;align-items:flex-start;justify-items:center;padding:20px;overflow:auto}
-  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show,#qnote.show,#bdump.show,#worry.show,#ideas.show{display:grid}
+  #modal,#chase,#tpl,#complete,#recap,#settings,#qnote,#bdump,#worry,#ideas,#dtpick{position:fixed;inset:0;background:rgba(20,25,45,.5);z-index:70;display:none;align-items:flex-start;justify-items:center;padding:20px;overflow:auto}
+  #modal.show,#chase.show,#tpl.show,#complete.show,#recap.show,#settings.show,#qnote.show,#bdump.show,#worry.show,#ideas.show,#dtpick.show{display:grid}
+  #dtpick{z-index:95}
+  .dt-disp{display:block;width:100%;text-align:left;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:15px;color:var(--ink);cursor:pointer}
+  .dt-disp.empty{color:var(--muted)}
+  .dtp-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px}
+  .dtp-month{font-weight:700;font-size:16px}
+  .dtp-nav{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:20px;cursor:pointer}
+  .dtp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:4px 12px}
+  .dtp-dows span{text-align:center;font-size:11.5px;font-weight:700;color:var(--muted);padding:4px 0}
+  .dtp-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:14.5px;cursor:pointer;border:none;background:transparent;color:var(--ink)}
+  .dtp-day:disabled{opacity:0;pointer-events:none}
+  .dtp-day.today{box-shadow:inset 0 0 0 1.5px var(--accent)}
+  .dtp-day.sel{background:var(--accent);color:#fff;font-weight:700}
+  .dtp-day.wkend{color:var(--hi)}
+  .dtp-day.sel.wkend{color:#fff}
+  .dtp-sel{text-align:center;font-size:13.5px;font-weight:700;color:var(--accent);padding:6px 0 0;min-height:20px}
+  .dtp-time{display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 0 6px}
+  .dtp-step{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .dtp-step button{width:44px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:13px}
+  .dtp-num{font-size:24px;font-weight:800;min-width:48px;text-align:center;padding:2px 0}
+  .dtp-ampm{display:flex;flex-direction:column;gap:4px;margin-left:6px}
+  .dtp-ampm button{width:52px;padding:7px 0;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:700;cursor:pointer}
+  .dtp-ampm button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   .idea-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
   .idea-row.done .idea-text{text-decoration:line-through;color:var(--muted)}
   .idea-text{flex:1;font-size:14px;line-height:1.4;white-space:pre-wrap}
@@ -292,7 +314,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 57</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 58</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -407,9 +429,9 @@
       <div class="field"><label>Promised to help (who)</label><input id="mHelp" placeholder="Person you committed to (optional)"></div>
       <div class="grid2">
         <div class="field"><label>Category</label><input id="mCat" list="catList" placeholder="e.g. Steve's, Cards, Home"><datalist id="catList"></datalist></div>
-        <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="datetime-local"><div id="mDueDays" class="day-chips"></div><div id="mDueDow" class="dow-hint"></div><a id="mGcal" class="gcal-link" href="#" target="_blank" rel="noopener" style="display:none">📅 Add to Google Calendar</a></div>
+        <div class="field"><label>Reminder (date & time)</label><input id="mDue" type="hidden"><button type="button" class="dt-disp" id="mDueDisp" data-dt="mDue">Tap to set date &amp; time</button><div id="mDueDays" class="day-chips"></div><div id="mDueDow" class="dow-hint"></div><a id="mGcal" class="gcal-link" href="#" target="_blank" rel="noopener" style="display:none">📅 Add to Google Calendar</a></div>
       </div>
-      <div class="field"><label>Deadline — must finish by</label><input id="mDeadline" type="datetime-local"><div id="mDeadlineDow" class="dow-hint"></div>
+      <div class="field"><label>Deadline — must finish by</label><input id="mDeadline" type="hidden"><button type="button" class="dt-disp" id="mDeadlineDisp" data-dt="mDeadline">Tap to set date &amp; time</button><div id="mDeadlineDow" class="dow-hint"></div>
         <div style="margin-top:8px"><label style="font-size:12.5px;color:var(--muted);display:block;margin-bottom:4px">Remind me before the deadline:</label>
           <div class="dlrem-row">
             <label><input type="checkbox" class="dlRemBox" value="10080"> 1 wk</label>
@@ -576,7 +598,7 @@
           <div class="seg" id="cPriority">
             <button type="button" data-v="high">High</button><button type="button" data-v="medium">Med</button><button type="button" data-v="low">Low</button>
           </div></div>
-        <div class="field"><label>Reminder — set, change, or clear</label><input id="cRemind" type="datetime-local"><div id="cRemindDow" class="dow-hint"></div></div>
+        <div class="field"><label>Reminder — set, change, or clear</label><input id="cRemind" type="hidden"><button type="button" class="dt-disp" id="cRemindDisp" data-dt="cRemind">Tap to set date &amp; time</button><div id="cRemindDow" class="dow-hint"></div></div>
       </div>
     </div>
     <div class="sheet-foot"><span></span>
@@ -613,9 +635,32 @@
   </div>
 </div>
 
+<div id="dtpick">
+  <div class="sheet" style="max-width:360px">
+    <div class="dtp-head">
+      <button type="button" class="dtp-nav" id="dtpPrev">&#8249;</button>
+      <div class="dtp-month" id="dtpMonth"></div>
+      <button type="button" class="dtp-nav" id="dtpNext">&#8250;</button>
+    </div>
+    <div class="dtp-grid dtp-dows"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+    <div class="dtp-grid" id="dtpDays"></div>
+    <div class="dtp-sel" id="dtpSel"></div>
+    <div class="dtp-time">
+      <div class="dtp-step"><button type="button" id="dtpHup">&#9650;</button><div class="dtp-num" id="dtpHour">9</div><button type="button" id="dtpHdn">&#9660;</button></div>
+      <div style="font-size:22px;font-weight:700">:</div>
+      <div class="dtp-step"><button type="button" id="dtpMup">&#9650;</button><div class="dtp-num" id="dtpMin">00</div><button type="button" id="dtpMdn">&#9660;</button></div>
+      <div class="dtp-ampm"><button type="button" id="dtpAM">AM</button><button type="button" id="dtpPM">PM</button></div>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn-ghost" id="dtpClear" style="color:var(--hi)">Clear</button>
+      <div style="display:flex;gap:8px"><button type="button" id="dtpCancel">Cancel</button><button type="button" class="btn-primary" id="dtpSet">Set</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 57</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 58</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -1524,7 +1569,51 @@ function refreshCRemindDow(){ const el=$("#cRemindDow"); if(!el) return; const r
 function setDueDay(d){ const cur=$("#mDue").value; let hh="09", mm="00";
   if(cur && cur.length>=16){ hh=cur.slice(11,13); mm=cur.slice(14,16); }
   const y=d.getFullYear(), mo=String(d.getMonth()+1).padStart(2,"0"), da=String(d.getDate()).padStart(2,"0");
-  $("#mDue").value=y+"-"+mo+"-"+da+"T"+hh+":"+mm; refreshDueDow(); buildDueDays(); }
+  $("#mDue").value=y+"-"+mo+"-"+da+"T"+hh+":"+mm; refreshDueDow(); buildDueDays(); updateDtDisp("mDue"); }
+/* ---- calendar + clock picker ---- */
+let dtTarget=null, dtCur=new Date(), dtView=new Date();
+function updateDtDisp(id){ const inp=$("#"+id), disp=$("#"+id+"Disp"); if(!inp||!disp) return;
+  const v=inp.value;
+  if(!v){ disp.textContent="Tap to set date & time"; disp.classList.add("empty"); return; }
+  disp.classList.remove("empty");
+  const d=new Date(v.length<=10?v+"T00:00:00":v);
+  disp.textContent=isNaN(d)?"Tap to set date & time":d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+" · "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
+function updateAllDtDisps(){ ["mDue","mDeadline","cRemind"].forEach(updateDtDisp); }
+function openDtPick(id){ dtTarget=id;
+  const v=$("#"+id).value;
+  if(v && v.length>=16){ const d=new Date(v); dtCur=isNaN(d)?new Date():d; }
+  else { dtCur=new Date(); dtCur.setHours(9,0,0,0); }
+  if(dtCur.getMinutes()%5) dtCur.setMinutes(Math.round(dtCur.getMinutes()/5)*5);
+  dtView=new Date(dtCur.getFullYear(), dtCur.getMonth(), 1);
+  renderDtp(); $("#dtpick").classList.add("show"); }
+function renderDtp(){
+  $("#dtpMonth").textContent=dtView.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+  const grid=$("#dtpDays"); grid.innerHTML="";
+  const first=new Date(dtView.getFullYear(), dtView.getMonth(), 1);
+  const startPad=first.getDay();
+  const daysIn=new Date(dtView.getFullYear(), dtView.getMonth()+1, 0).getDate();
+  const t0=new Date(); t0.setHours(0,0,0,0);
+  for(let i=0;i<startPad;i++){ const b=document.createElement("button"); b.className="dtp-day"; b.disabled=true; grid.appendChild(b); }
+  for(let d=1; d<=daysIn; d++){
+    const cell=new Date(dtView.getFullYear(), dtView.getMonth(), d);
+    const b=document.createElement("button"); b.type="button"; b.className="dtp-day"; b.textContent=d;
+    if(cell.getDay()===0||cell.getDay()===6) b.classList.add("wkend");
+    const c0=new Date(cell); c0.setHours(0,0,0,0);
+    if(c0.getTime()===t0.getTime()) b.classList.add("today");
+    if(cell.getFullYear()===dtCur.getFullYear()&&cell.getMonth()===dtCur.getMonth()&&d===dtCur.getDate()) b.classList.add("sel");
+    b.onclick=()=>{ dtCur.setFullYear(cell.getFullYear(), cell.getMonth(), d); renderDtp(); };
+    grid.appendChild(b);
+  }
+  let h=dtCur.getHours(); const pm=h>=12; let h12=h%12; if(h12===0)h12=12;
+  $("#dtpHour").textContent=h12; $("#dtpMin").textContent=String(dtCur.getMinutes()).padStart(2,"0");
+  $("#dtpAM").classList.toggle("on",!pm); $("#dtpPM").classList.toggle("on",pm);
+  $("#dtpSel").textContent=dtCur.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})+" · "+dtCur.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+}
+function dtApplyRefresh(){ if(dtTarget==="mDue"){ refreshDueDow(); buildDueDays(); const g=$("#mGcal"); }
+  else if(dtTarget==="mDeadline"){ refreshDeadlineDow(); }
+  else if(dtTarget==="cRemind"){ refreshCRemindDow(); }
+  updateDtDisp(dtTarget); }
+function closeDtPick(){ $("#dtpick").classList.remove("show"); dtTarget=null; }
 function buildDueDays(){ const box=$("#mDueDays"); if(!box) return; box.innerHTML="";
   const today=new Date(); today.setHours(0,0,0,0);
   const cur=$("#mDue").value; const curDay=(cur&&cur.length>=10)?cur.slice(0,10):"";
@@ -1631,7 +1720,7 @@ function openEdit(id){ editId=id; const t=tasks.find(x=>x.id===id); if(!t)return
   { const up=$("#mUpdateProgress"); if(up) up.style.display = (t.status==="done") ? "none" : "block"; }
   editAttach = Array.isArray(t.attach) ? t.attach.map(a=>({...a})) : []; renderAttach();
   { const bd=$("#mBreakdown"); if(bd){ bd.style.display="none"; bd.innerHTML=""; } }
-  refreshDueDow(); refreshDeadlineDow(); refreshWaitSinceDow(); refreshNthWrap(); renderSubs(id); buildDueDays();
+  refreshDueDow(); refreshDeadlineDow(); refreshWaitSinceDow(); refreshNthWrap(); renderSubs(id); buildDueDays(); updateAllDtDisps();
   { const offs=Array.isArray(t.dlReminds)?t.dlReminds.map(Number):[]; document.querySelectorAll(".dlRemBox").forEach(b=>b.checked=offs.includes(parseInt(b.value))); }
   { const sp=$("#estSpent"); const sec=t.timeSpentSec||0;
     if(sec>=60){ sp.style.display="block"; sp.innerHTML="⏱ Focus time logged so far: <b>"+fmtMin(Math.round(sec/60))+"</b>"+((parseInt(t.estimate)||0)?(" of ~"+fmtMin(t.estimate)+" estimated"):""); }
@@ -1651,6 +1740,23 @@ $("#mDue").addEventListener("change",refreshDueDow);
 $("#mDue").addEventListener("input",refreshDueDow);
 $("#mDeadline").addEventListener("change",refreshDeadlineDow);
 $("#mDeadline").addEventListener("input",refreshDeadlineDow);
+document.querySelectorAll(".dt-disp").forEach(b=>b.onclick=()=>openDtPick(b.dataset.dt));
+$("#dtpPrev").onclick=()=>{ dtView.setMonth(dtView.getMonth()-1); renderDtp(); };
+$("#dtpNext").onclick=()=>{ dtView.setMonth(dtView.getMonth()+1); renderDtp(); };
+$("#dtpHup").onclick=()=>{ dtCur.setHours((dtCur.getHours()+1)%24); renderDtp(); };
+$("#dtpHdn").onclick=()=>{ dtCur.setHours((dtCur.getHours()+23)%24); renderDtp(); };
+$("#dtpMup").onclick=()=>{ dtCur.setMinutes((dtCur.getMinutes()+5)%60); renderDtp(); };
+$("#dtpMdn").onclick=()=>{ dtCur.setMinutes((dtCur.getMinutes()+55)%60); renderDtp(); };
+$("#dtpAM").onclick=()=>{ if(dtCur.getHours()>=12) dtCur.setHours(dtCur.getHours()-12); renderDtp(); };
+$("#dtpPM").onclick=()=>{ if(dtCur.getHours()<12) dtCur.setHours(dtCur.getHours()+12); renderDtp(); };
+$("#dtpCancel").onclick=closeDtPick;
+$("#dtpick").onclick=e=>{ if(e.target.id==="dtpick") closeDtPick(); };
+$("#dtpClear").onclick=()=>{ if(dtTarget){ $("#"+dtTarget).value=""; dtApplyRefresh(); } closeDtPick(); };
+$("#dtpSet").onclick=()=>{ if(dtTarget){
+  const y=dtCur.getFullYear(), mo=String(dtCur.getMonth()+1).padStart(2,"0"), da=String(dtCur.getDate()).padStart(2,"0");
+  const hh=String(dtCur.getHours()).padStart(2,"0"), mi=String(dtCur.getMinutes()).padStart(2,"0");
+  $("#"+dtTarget).value=y+"-"+mo+"-"+da+"T"+hh+":"+mi;
+  dtApplyRefresh(); } closeDtPick(); };
 $("#mWaitSince").addEventListener("change",refreshWaitSinceDow);
 $("#mWaitSince").addEventListener("input",refreshWaitSinceDow);
 $("#cRemind").addEventListener("change",refreshCRemindDow);
@@ -1733,7 +1839,7 @@ function openComplete(id){ completeId=id; const t=tasks.find(x=>x.id===id); if(!
   setSeg("#cNext","doing"); $("#cWaitWrap").style.display="none";
   $("#cWaitOn").value=t.waitOn||"";
   setSeg("#cPriority", t.priority||"medium");
-  $("#cRemind").value=t.due||""; refreshCRemindDow();
+  $("#cRemind").value=t.due||""; refreshCRemindDow(); updateDtDisp("cRemind");
   updateDoneEnable();
   $("#complete").classList.add("show"); setTimeout(()=>$("#cDid").focus(),50); }
 document.querySelectorAll("#cChips button").forEach(b=>b.onclick=()=>{ const was=b.classList.contains("sel");
@@ -2005,7 +2111,7 @@ $("#searchClear").onclick=()=>{ $("#search").value=""; $("#searchClear").style.d
 document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active")); c.classList.add("active"); view=c.dataset.view; render(); });
 document.querySelectorAll("#modebar button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 document.querySelectorAll("#locToggle button").forEach(b=>b.onclick=()=>setLoc(b.dataset.l));
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); $("#settings").classList.remove("show"); $("#qnote").classList.remove("show"); $("#bdump").classList.remove("show"); $("#worry").classList.remove("show"); $("#ideas").classList.remove("show"); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeFocus(); $("#chase").classList.remove("show"); $("#tpl").classList.remove("show"); $("#complete").classList.remove("show"); $("#recap").classList.remove("show"); $("#settings").classList.remove("show"); $("#qnote").classList.remove("show"); $("#bdump").classList.remove("show"); $("#worry").classList.remove("show"); $("#ideas").classList.remove("show"); $("#dtpick").classList.remove("show"); } });
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkReminders(); syncPull(); } });
 (function(){ let ticking=false; const btn=$("#toTop");
   btn.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
@@ -2032,7 +2138,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 57"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 58"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
@@ -2062,12 +2168,12 @@ async function checkForUpdate(){
 setTimeout(checkForUpdate, 4000);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkForUpdate(); });
 function anyOverlayOpen(){
-  const sels=["#modal","#chase","#tpl","#complete","#recap","#settings","#qnote","#bdump","#worry","#focus","#ideas"];
+  const sels=["#modal","#chase","#tpl","#complete","#recap","#settings","#qnote","#bdump","#worry","#focus","#ideas","#dtpick"];
   return sels.some(s=>{ const el=$(s); return el && el.classList.contains("show"); });
 }
 function closeTopOverlay(){
   if(typeof closeModal==="function" && $("#modal") && $("#modal").classList.contains("show")){ closeModal(); return true; }
-  const order=["#qnote","#bdump","#worry","#ideas","#complete","#chase","#tpl","#recap","#settings"];
+  const order=["#dtpick","#qnote","#bdump","#worry","#ideas","#complete","#chase","#tpl","#recap","#settings"];
   for(const s of order){ const el=$(s); if(el && el.classList.contains("show")){ el.classList.remove("show"); return true; } }
   if($("#focus") && $("#focus").classList.contains("show")){ if(typeof closeFocus==="function") closeFocus(); else $("#focus").classList.remove("show"); return true; }
   return false;
