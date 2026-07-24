@@ -314,7 +314,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 61</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 62</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -660,7 +660,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 61</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 62</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -800,7 +800,7 @@ const BOARD = { me:"Kelly" };
 async function syncBoardTasks(){
   try{
     if(!PUSH.workerURL) return;
-    const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/board/tasks",{cache:"no-store"});
+    const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/board/tasks",{cache:"no-store",headers:fbHeaders()});
     if(!r.ok) return;
     const j=await r.json(); const bt=(j&&j.tasks)||[];
     const mine=bt.filter(t=>t && t.status!=="done" && Array.isArray(t.assignees) && t.assignees.some(a=>a && a.name===BOARD.me));
@@ -823,7 +823,7 @@ async function completeOnBoard(m){
   if(!m || !m.boardId) return;
   try{
     if(!PUSH.workerURL){ toast("Couldn't reach the work board — complete it there when you can."); return; }
-    const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/board/complete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:m.boardId, by:BOARD.me})});
+    const r=await fetch(PUSH.workerURL.replace(/\/$/,"")+"/board/complete",{method:"POST",headers:fbHeaders({"Content-Type":"application/json"}),body:JSON.stringify({id:m.boardId, by:BOARD.me})});
     const j=await r.json().catch(()=>({}));
     toast((r.ok&&j.ok)?"Marked done on the work board ✓":"Couldn't update the work board — mark it done there.");
   }catch(e){ toast("Couldn't update the work board — mark it done there."); }
@@ -1098,10 +1098,12 @@ function nextDate(iso,t){ const recur=t.recur; const base=iso?new Date(iso):new 
   }
   return d; }
 function spawnRecur(t){ if(!t.recur)return; const nd=nextDate(t.due||localDT(new Date()), t);
+  let hide=0; if(nd){ const h=new Date(nd); h.setHours(0,0,0,0); hide=h.getTime(); }
   tasks.unshift(newTask({title:t.title,notes:t.notes,category:t.category,priority:t.priority,
     horizon:t.horizon,energy:t.energy,estimate:t.estimate,recur:t.recur,recurOrd:t.recurOrd,recurDow:t.recurDow,
     whenHint:t.whenHint,loc:t.loc,locs:(t.locs||[]).slice(),anxiety:t.anxiety,
-    due:nd?localDT(nd):""})); }
+    hideUntil:hide, due:nd?localDT(nd):""})); }
+function isHiddenFuture(t){ return !!(t.hideUntil && t.hideUntil>now()); }
 function recurLabel(t){ return {daily:"daily",weekly:"weekly",biweekly:"every 2 wks",weekdays:"weekdays",
   monthly:"monthly",bimonthly:"every 2 mo",quarterly:"quarterly",semiannual:"twice/yr",annual:"yearly",
   monthly_nth:["first","second","third","fourth","last"][((parseInt(t.recurOrd)||1)===-1?4:(parseInt(t.recurOrd)||1)-1)]+" "+
@@ -1117,11 +1119,12 @@ function snoozeChase(t){ t.due=chaseDate(3); t.reminded=false; touch(t); save();
 function searchActive(){ return $("#search").value.trim()!==""; }
 function visible(){
   const q=$("#search").value.trim().toLowerCase();
-  if(q){ return live().filter(t=>[t.title,t.notes,t.category,t.waitOn,t.helpFor].some(f=>(f||"").toLowerCase().includes(q))); }
-  if(view==="today"){ let r=live().filter(isFocusToday); if($("#hideDone").checked) r=r.filter(t=>t.status!=="done"); return r; }
-  if(view==="inbox"){ return live().filter(t=>t.inbox && t.status!=="done"); }
+  if(q){ return live().filter(t=>!isHiddenFuture(t)&&[t.title,t.notes,t.category,t.waitOn,t.helpFor].some(f=>(f||"").toLowerCase().includes(q))); }
+  if(view==="today"){ let r=live().filter(t=>isFocusToday(t)&&!isHiddenFuture(t)); if($("#hideDone").checked) r=r.filter(t=>t.status!=="done"); return r; }
+  if(view==="inbox"){ return live().filter(t=>t.inbox && t.status!=="done" && !isHiddenFuture(t)); }
   const cf=$("#catFilter").value, pf=$("#prFilter").value, hd=$("#hideDone").checked, anx=$("#anxFilter").checked, prom=$("#promisedFilter").checked;
   return live().filter(t=>{
+    if(isHiddenFuture(t)) return false;
     if(view!=="all" && t.horizon!==view) return false;
     if(locView!=="all"){ const ls=taskLocs(t); if(ls.length && !ls.includes(locView)) return false; }
     if(cf && t.category!==cf) return false;
@@ -1177,7 +1180,7 @@ function render(){
     panel.innerHTML='<div class="tp-head">⭐ Today\'s 3 — '+fc+'/3 chosen</div>'+
       '<div class="tp-sub">Tap to pick up to three things to focus on today. Everything else stays safe on your full list.</div>';
     const pl=document.createElement("div"); pl.className="tp-list";
-    const cands=live().filter(t=>(t.status==="todo"||t.status==="doing")&&!isSnoozed(t)).sort(activeSort);
+    const cands=live().filter(t=>(t.status==="todo"||t.status==="doing")&&!isSnoozed(t)&&!isHiddenFuture(t)).sort(activeSort);
     if(!cands.length){ const e=document.createElement("div"); e.className="tp-empty"; e.textContent="No active tasks yet — add some up top first."; pl.appendChild(e); }
     cands.forEach(t=>{ const r=document.createElement("button"); r.className="tp-item"+(isFocusToday(t)?" on":"");
       r.innerHTML=(isFocusToday(t)?"★ ":"☆ ")+esc(t.title);
@@ -2191,7 +2194,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 61"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 62"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
