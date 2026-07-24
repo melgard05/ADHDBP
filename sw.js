@@ -4,10 +4,14 @@
    - Focuses the app when a notification is clicked.
    - Receives Web Push (for the future push backend). */
 
-const CACHE = "taskdesk-v4";   // bumped for Phase 2 push
+const CACHE = "taskdesk-v5";   // bumped for Phase 2 push
 const ASSETS = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "badge.png"];
-const FB_URL = "https://adhd-bipolar-organization-default-rtdb.firebaseio.com";
-const FB_PATH = "td_k9m4x7qz2p";
+const WORKER_URL = "https://adhdbp-push.melgard05.workers.dev";
+function getTok(){ return new Promise(res=>{ try{ const rq=indexedDB.open("td_kv",1);
+  rq.onupgradeneeded=()=>rq.result.createObjectStore("kv");
+  rq.onsuccess=()=>{ try{ const tx=rq.result.transaction("kv","readonly"); const g=tx.objectStore("kv").get("apptoken");
+    g.onsuccess=()=>res(g.result||""); g.onerror=()=>res(""); }catch(e){ res(""); } };
+  rq.onerror=()=>res(""); }catch(e){ res(""); } }); }
 
 self.addEventListener("install", e => {
   e.waitUntil(
@@ -71,11 +75,13 @@ self.addEventListener("push", e => {
     try {
       // Morning summary signal?
       try {
-        const sr = await fetch(FB_URL + "/_summary.json", { cache: "no-store" });
+        const tok = await getTok();
+      if(!tok) throw 0;
+      const sr = await fetch(WORKER_URL + "/summary?t=" + encodeURIComponent(tok), { cache: "no-store" });
         if (sr.ok) {
           const sig = await sr.json();
           if (sig && sig.ms && (Date.now() - sig.ms) < 180000) {
-            const tr = await fetch(FB_URL + "/" + FB_PATH + ".json", { cache: "no-store" });
+            const tr = await fetch(WORKER_URL + "/tasks?t=" + encodeURIComponent(tok), { cache: "no-store" });
             const dd = tr.ok ? await tr.json() : null;
             const tk = Array.isArray(dd) ? dd : (dd ? Object.values(dd) : []);
             const now2 = Date.now();
@@ -96,7 +102,9 @@ self.addEventListener("push", e => {
           }
         }
       } catch (_) {}
-      const r = await fetch(FB_URL + "/" + FB_PATH + ".json", { cache: "no-store" });
+      const tok2 = await getTok();
+      if(!tok2) { return fallback(); }
+      const r = await fetch(WORKER_URL + "/tasks?t=" + encodeURIComponent(tok2), { cache: "no-store" });
       if (!r.ok) { return fallback(); }
       const d = await r.json();
       const tasks = Array.isArray(d) ? d : (d ? Object.values(d) : []);

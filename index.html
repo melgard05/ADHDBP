@@ -314,7 +314,7 @@
 <div class="wrap">
   <header>
     <div class="topbar">
-      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 60</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
+      <div class="brand"><span id="syncLight" class="sync-light" title="Sync status"></span>ADHDBP Control Panel <small id="storeNote" style="cursor:pointer">loading…</small> <span id="buildBadge" style="font-size:10px;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:6px;padding:1px 6px">build 61</span> <span class="done-chip" id="doneChip">✓ 0 today</span></div>
       <div class="tools">
         <button class="btn-ghost" id="calmBtn" title="Collapse to just your 3 focus tasks">&#127919; My 3</button>
         <button class="btn-ghost" id="focusBtn" title="Show one task at a time">&#127919; Focus</button>
@@ -660,7 +660,7 @@
 
 <div id="settings">
   <div class="sheet">
-    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 60</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
+    <h3 class="sheet-h-sticky">Settings &amp; tools <small>ADHDBP Control Panel · <span id="buildBadge2">build 61</span></small><button id="setX" class="sheet-x" title="Close">&#10005;</button></h3>
     <div class="sheet-body">
       <div class="set-sec">
         <div class="set-h">Sync</div>
@@ -708,6 +708,12 @@
           <div class="set-row"><span>Send it at</span><select id="sumHour"></select></div>
           <div class="set-note">A single morning notification: how many tasks are due today, overdue, and starred. Needs background reminders on.</div>
         </div>
+      </div>
+      <div class="set-sec">
+        <div class="set-h">Security</div>
+        <div class="field"><label>Device key (enter once — unlocks sync on this device)</label>
+          <input id="setDeviceKey" placeholder="Your device key" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+        <div class="set-note">Your data is locked down: the database only answers to your Cloudflare Worker, and the Worker only answers to devices holding this key. Set the same key in the Worker as APP_TOKEN.</div>
       </div>
       <div class="set-sec">
         <div class="set-h">Filters</div>
@@ -773,10 +779,16 @@
    Leave both empty to run local-only (per device).
 =====================================================================*/
 const FB = {
-  databaseURL:"https://adhd-bipolar-organization-default-rtdb.firebaseio.com", path:"td_k9m4x7qz2p", auth:"",
-  proxyURL:"",            // e.g. https://taskdesk.<you>.workers.dev
-  proxyToken:""           // must match the Worker's APP_TOKEN
+  databaseURL:"", path:"td_k9m4x7qz2p", auth:"",
+  proxyURL:"https://adhdbp-push.melgard05.workers.dev",   // all data flows through the Worker (lockdown)
+  proxyToken:""            // device key — set in Settings, saved on this device
 };
+try{ const _dk=localStorage.getItem("td_devicekey"); if(_dk) FB.proxyToken=_dk; }catch(e){}
+/* share the device key with the service worker via IndexedDB */
+function idbPutToken(v){ try{ const rq=indexedDB.open("td_kv",1);
+  rq.onupgradeneeded=()=>rq.result.createObjectStore("kv");
+  rq.onsuccess=()=>{ try{ const tx=rq.result.transaction("kv","readwrite"); tx.objectStore("kv").put(v,"apptoken"); }catch(e){} }; }catch(e){} }
+if(FB.proxyToken) idbPutToken(FB.proxyToken);
 /* Phase 2 — background reminders. After you deploy the Worker, paste its URL into workerURL. */
 const PUSH = {
   workerURL:"https://adhdbp-push.melgard05.workers.dev",   // default; Settings can override (saved on the phone)
@@ -840,14 +852,14 @@ if(!templates) templates=[
 function saveTpl(){ try{ localStorage.setItem(TKEY,JSON.stringify(templates)); }catch(e){} }
 
 /* ---- sync (Firebase direct OR Worker proxy) ---- */
-const fbEnabled=()=>!!(FB.proxyURL||FB.databaseURL);
+const fbEnabled=()=>!!(FB.proxyURL&&FB.proxyToken);
 /* ---- ideas & changes (separate from tasks, synced) ---- */
-const IDEAS_URL=()=>FB.databaseURL.replace(/\/$/,"")+"/td_ideas.json";
+const IDEAS_URL=()=>FB.proxyURL.replace(/\/$/,"")+"/ideas";
 let ideas=[];
 function loadIdeas(){ try{ const r=localStorage.getItem("td_ideas"); ideas=r?JSON.parse(r):[]; }catch(e){ ideas=[]; } if(!Array.isArray(ideas)) ideas=[]; }
 function persistIdeas(){ try{ localStorage.setItem("td_ideas",JSON.stringify(ideas)); }catch(e){}
-  if(fbEnabled()){ try{ fetch(IDEAS_URL(),{method:"PUT",body:JSON.stringify(ideas)}).catch(()=>{}); }catch(e){} } }
-async function pullIdeas(){ if(!fbEnabled())return; try{ const r=await fetch(IDEAS_URL(),{cache:"no-store"}); if(!r.ok)return; const d=await r.json();
+  if(fbEnabled()){ try{ fetch(IDEAS_URL(),{method:"PUT",headers:fbHeaders({"Content-Type":"application/json"}),body:JSON.stringify(ideas)}).catch(()=>{}); }catch(e){} } }
+async function pullIdeas(){ if(!fbEnabled())return; try{ const r=await fetch(IDEAS_URL(),{cache:"no-store",headers:fbHeaders()}); if(!r.ok)return; const d=await r.json();
   if(Array.isArray(d)){ ideas=d; try{ localStorage.setItem("td_ideas",JSON.stringify(ideas)); }catch(e){} if($("#ideas") && $("#ideas").classList.contains("show")) renderIdeas(); } }catch(e){} }
 function renderIdeas(){ const box=$("#ideaList"); if(!box) return;
   const open=ideas.filter(i=>!i.done), done=ideas.filter(i=>i.done);
@@ -928,7 +940,7 @@ function setSyncLight(state){ const l=$("#syncLight"); if(!l) return;
   else if(state==="offline"){ l.classList.add("sl-off"); l.title="Can't reach sync — tap to retry"; }
   else { l.classList.add("sl-idle"); l.title="Connecting…"; } }
 function syncNote(){ const el=$("#storeNote");
-  if(!fbEnabled()){ setSyncLight("idle"); if(el){ el.textContent = persistent ? "saved on this device" : "preview mode — won't persist here"; el.style.color="var(--muted)"; } return; }
+  if(!fbEnabled()){ setSyncLight("idle"); if(el){ el.textContent = FB.proxyURL ? "enter your device key in ⚙ Settings to sync" : (persistent ? "saved on this device" : "preview mode — won't persist here"); el.style.color="var(--hi)"; } return; }
   setSyncLight(syncState==="ok"?"ok":syncState==="saving"?"saving":syncState==="offline"?"offline":"idle");
   if(!el) return;
   if(syncState==="saving"){ el.textContent="saving…"; el.style.color="var(--muted)"; }
@@ -2063,6 +2075,12 @@ $("#ideasX").onclick=()=>$("#ideas").classList.remove("show");
 $("#ideas").onclick=e=>{ if(e.target.id==="ideas") $("#ideas").classList.remove("show"); };
 $("#ideaAdd").onclick=addIdea;
 $("#ideaInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); addIdea(); } });
+{ const dk=$("#setDeviceKey"); if(dk){ dk.value=FB.proxyToken||"";
+  dk.onchange=()=>{ const v=dk.value.trim(); FB.proxyToken=v;
+    try{ localStorage.setItem("td_devicekey",v); }catch(e){}
+    idbPutToken(v);
+    if(v){ toast("Device key saved — syncing"); syncState="saving"; syncNote(); syncPull(); fbPushDebounced(); pullIdeas(); }
+    else { syncNote(); } }; } }
 $("#pushBtn").onclick=enablePush;
 $("#setX").onclick=()=>$("#settings").classList.remove("show");
 $("#setWorkerUrl").onchange=()=>{ const v=$("#setWorkerUrl").value.trim().replace(/\/$/,""); PUSH.workerURL=v;
@@ -2173,7 +2191,7 @@ setMode(mode); normalizeDueMs(); saveLocal(); fbPushDebounced(); checkReminders(
 if("scrollRestoration" in history) history.scrollRestoration="manual";
 window.scrollTo(0,0);
 window.addEventListener("pageshow",()=>window.scrollTo(0,0));
-{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 60"; if(b2) b2.textContent=v; }
+{ const b=$("#buildBadge"), b2=$("#buildBadge2"); const v=b?b.textContent.trim():"build 61"; if(b2) b2.textContent=v; }
 /* ---- "new build available" check ---- */
 const APP_BUILD=(function(){ try{ const m=($("#buildBadge").textContent||"").match(/(\d+)/); return m?parseInt(m[1]):0; }catch(e){ return 0; } })();
 let updateDismissed=0;
